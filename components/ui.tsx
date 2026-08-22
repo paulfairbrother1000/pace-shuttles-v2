@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ReactNode } from 'react';
+import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { LayoutDashboard, Activity, BookOpen, Users, MapPinned, BarChart3, WalletCards, Headphones, Settings, Menu, ChevronRight, ShipWheel, CircleDollarSign, CarFront, UserRound, Route, Bell, MoreHorizontal } from 'lucide-react';
 
 export function Brand(){ return <div className="brand"><div className="brandmark">P</div><div><b>Pace</b><small>SHUTTLES</small></div></div> }
@@ -16,7 +17,7 @@ export function AdminShell({children,title,subtitle}:{children:ReactNode,title:s
   const operator=params.get('operator');
   return <div className="app-shell">
     <aside className="sidebar"><Brand/><nav>{nav.map(([href,label,Icon])=><Link key={href} href={href} className={path===href||path.startsWith(href+'/')?'active':''}><Icon size={18}/><span>{label}</span></Link>)}</nav><div className="sidebar-footer"><button><Menu size={18}/>Collapse menu</button></div></aside>
-    <main className="main"><header className="topbar"><div><h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</div><div className="top-actions"><select defaultValue="Global"><option>Global</option><option>Antigua & Barbuda</option><option>Barbados</option><option>BVI</option></select><select defaultValue="This Month"><option>Today</option><option>This Month</option><option>Last 30 Days</option></select><button className="icon-btn"><Bell size={18}/></button><div className="avatar">AD</div></div></header>
+    <main className="main"><header className="topbar"><div><h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</div><div className="top-actions"><select defaultValue="Global"><option>Global</option><option>Antigua & Barbuda</option><option>Barbados</option><option>BVI</option></select><select defaultValue="This Month"><option>Today</option><option>This Month</option><option>Last 30 Days</option></select><button className="icon-btn"><Bell size={18}/></button><button className="avatar avatar-btn" title="Sign out" onClick={()=>getSupabaseBrowserClient()?.auth.signOut()}>AD</button></div></header>
     {operator&&<div className="operator-banner">Managing operator: <strong>{operator==='barefoot'?'Barefoot':operator}</strong><Link href={path}>Exit operator management</Link></div>}
     <div className="content">{children}</div></main>
     <MobileNav />
