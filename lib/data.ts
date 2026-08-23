@@ -129,3 +129,14 @@ export const customerOpenSupport=(bookingId:string,message:string,category:strin
 export const customerReplySupport=(conversationId:string,message:string)=>rpc('v2_customer_reply_support',{p_conversation_id:conversationId,p_message:message});
 export const captainSendJourneyMessage=(allocationId:string,message:string,category:string)=>rpc('v2_captain_send_journey_message',{p_confirmed_allocation_id:allocationId,p_message:message,p_category:category});
 export const operatorUpdateRouteOffer=(offerId:string,minSeats:number,maxSeats:number,minRevenueCents:number,preferred:boolean,threshold:number|null,discountEnabled:boolean,discountBps:number)=>rpc('v2_operator_update_route_offer',{p_offer_id:offerId,p_min_seats:minSeats,p_max_seats:maxSeats,p_min_revenue_cents:minRevenueCents,p_preferred:preferred,p_threshold:threshold,p_discount_enabled:discountEnabled,p_discount_bps:discountBps});
+
+// Production finance / refund / quality operations
+export async function loadAdminRefundOperations(){return select('v2_admin_refund_operations','requested_at',1000)}
+export async function loadAdminStripeReconciliation(){return select('v2_admin_stripe_reconciliation','received_at',1000)}
+export async function loadAdminQualityEvidence(){return select('v2_admin_quality_evidence','occurred_at',1000)}
+export async function loadAdminCustomerFeedback(){return select('v2_admin_customer_feedback','created_at',1000)}
+export const adminApproveRefund=(refundRequestId:string,approvedCents:number)=>rpc('v2_admin_approve_refund',{p_refund_request_id:refundRequestId,p_approved_refund_cents:approvedCents});
+export const adminRecordRefundPaid=(refundRequestId:string,providerRef:string)=>rpc('v2_admin_record_refund_paid',{p_refund_request_id:refundRequestId,p_provider_refund_ref:providerRef});
+export const adminReviewFeedback=(feedbackId:string,attribution:string)=>rpc('v2_admin_review_feedback',{p_feedback_id:feedbackId,p_attribution:attribution});
+export const adminRefreshQuality=(operatorId:string)=>rpc('v2_admin_refresh_quality',{p_operator_id:operatorId});
+export const customerCancelBooking=(bookingId:string,requestedRefundCents:number,reason:string)=>rpc('v2_customer_cancel_booking',{p_booking_id:bookingId,p_requested_refund_cents:requestedRefundCents,p_reason:reason});

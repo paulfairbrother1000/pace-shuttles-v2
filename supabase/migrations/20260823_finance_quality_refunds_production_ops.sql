@@ -1,0 +1,4 @@
+-- Production migration already applied directly to Supabase.
+-- Adds protected Site Admin refund/reconciliation/quality views and actions,
+-- plus authenticated customer cancellation/refund request action.
+-- See Supabase migration history: finance_quality_refunds_production_ops.
