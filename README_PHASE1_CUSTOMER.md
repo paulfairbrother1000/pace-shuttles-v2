@@ -32,3 +32,6 @@ Overlay this folder onto the repository root and commit to `main`.
 - The planner surfaces the next available dates for the selected destination/pick-up and retains date, type and party filters.
 - Checkout now validates lead and passenger names, supports passenger age groups, displays a live quote-hold countdown, handles expiry, and preserves the whole-party-not-split rule.
 - Payment remains intentionally pending until Phase 2 Stripe integration.
+
+### V1 filter behaviour correction
+After a country is chosen, destination is optional. The planner immediately lists all currently scheduled journeys for that country. Destination, pickup, date and vehicle type act as independent filters. Selecting only a date shows every journey running in the chosen country on that day, matching the V1 discovery behaviour.
