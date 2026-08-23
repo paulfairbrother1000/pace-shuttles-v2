@@ -85,6 +85,16 @@ export const adminMarkSettlementSent=(settlementId:string,externalReference:stri
 export const adminReconcileSettlementPaid=(settlementId:string,externalReference:string)=>rpc('v2_admin_reconcile_settlement_paid',{p_settlement_id:settlementId,p_external_reference:externalReference});
 
 export async function loadAdminVehicleConsiderations(){return select('v2_admin_vehicle_considerations','updated_at',1000)}
+export async function loadAdminSchedulerRuns(){return select('v2_admin_scheduler_runs','started_at',1000)}
+export async function loadAdminSupportMessages(){return select('v2_admin_support_messages','created_at',2000)}
+export async function loadAdminVoyageLogs(){return select('v2_admin_voyage_logs','created_at',1000)}
+export async function loadAdminNotifications(){return select('v2_admin_notifications','created_at',1000)}
+export async function loadAdminProfiles(){return select('v2_admin_profiles','created_at',1000)}
+export const adminClaimSupportTicket=(ticketId:string)=>rpc('v2_admin_claim_support_ticket',{p_ticket_id:ticketId});
+export const adminResolveSupportTicket=(ticketId:string,note:string)=>rpc('v2_admin_resolve_support_ticket',{p_ticket_id:ticketId,p_resolution_note:note});
+export const adminCloseSupportConversation=(conversationId:string)=>rpc('v2_admin_close_support_conversation',{p_conversation_id:conversationId});
+export const adminQueueNotification=(a:any)=>rpc('v2_admin_queue_notification',a);
+export const adminSetDepartureRisk=(departureId:string,atRisk:boolean,reason:string|null)=>rpc('v2_admin_set_departure_risk',{p_departure_id:departureId,p_at_risk:atRisk,p_reason:reason});
 export const adminProcessDepartureT72=(departureId:string,force=false)=>rpc('v2_admin_process_departure_t72',{p_departure_id:departureId,p_force:force});
 export const adminProcessDepartureT24=(departureId:string,force=false)=>rpc('v2_admin_process_departure_t24',{p_departure_id:departureId,p_force:force});
 export const adminRefreshLiveConsiderations=(departureId:string)=>rpc('v2_admin_refresh_live_considerations',{p_departure_id:departureId});
