@@ -58,3 +58,17 @@ export const adminUpdateOperator=(a:any)=>rpc('v2_admin_update_operator',a);
 export const adminSetCountryCommission=(countryId:string,bps:number,note:string)=>rpc('v2_admin_set_country_commission',{p_country_id:countryId,p_commission_bps:bps,p_note:note});
 export const adminSetOperatorCommissionOverride=(operatorId:string,bps:number,reason:string)=>rpc('v2_admin_set_operator_commission_override',{p_operator_id:operatorId,p_commission_bps:bps,p_reason:reason});
 export const adminEndOperatorCommissionOverride=(operatorId:string)=>rpc('v2_admin_end_operator_commission_override',{p_operator_id:operatorId});
+
+export async function loadRegions(){return select('v2_regions','name',500)}
+export async function loadLocalities(){return select('v2_localities','name',500)}
+export async function loadRouteVehicleTypes(){return select('v2_route_vehicle_types','route_name',1000)}
+export async function loadOperatorVehicleTypes(){return select('v2_operator_vehicle_types','operator_name',1000)}
+export const adminUpdateCountryHierarchy=(countryId:string,isLarge:boolean,regionLabel:string,localityLabel:string)=>rpc('v2_admin_update_country_hierarchy',{p_country_id:countryId,p_is_large:isLarge,p_region_label:regionLabel,p_locality_label:localityLabel});
+export const adminCreateRegion=(a:any)=>rpc('v2_admin_create_region',a);
+export const adminCreateLocality=(a:any)=>rpc('v2_admin_create_locality',a);
+export const adminCreatePickup=(a:any)=>rpc('v2_admin_create_pickup',a);
+export const adminCreateDestination=(a:any)=>rpc('v2_admin_create_destination',a);
+export const adminCreateRoute=(a:any)=>rpc('v2_admin_create_route',a);
+export const adminSetRouteActive=(routeId:string,active:boolean)=>rpc('v2_admin_set_route_active',{p_route_id:routeId,p_active:active});
+export const adminSetRouteVehicleType=(routeId:string,vehicleTypeId:string,active:boolean)=>rpc('v2_admin_set_route_vehicle_type',{p_route_id:routeId,p_vehicle_type_id:vehicleTypeId,p_active:active});
+export const adminSetOperatorVehicleType=(operatorId:string,vehicleTypeId:string,approved:boolean,note:string)=>rpc('v2_admin_set_operator_vehicle_type',{p_operator_id:operatorId,p_vehicle_type_id:vehicleTypeId,p_approved:approved,p_note:note});
