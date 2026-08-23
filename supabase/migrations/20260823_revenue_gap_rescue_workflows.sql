@@ -1,0 +1,3 @@
+-- Applied to production Supabase on 2026-08-23.
+-- Revenue-gap rescue admin/customer views and protected RPC workflows.
+-- Kept in repository so schema history matches production.

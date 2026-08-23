@@ -140,3 +140,13 @@ export const adminRecordRefundPaid=(refundRequestId:string,providerRef:string)=>
 export const adminReviewFeedback=(feedbackId:string,attribution:string)=>rpc('v2_admin_review_feedback',{p_feedback_id:feedbackId,p_attribution:attribution});
 export const adminRefreshQuality=(operatorId:string)=>rpc('v2_admin_refresh_quality',{p_operator_id:operatorId});
 export const customerCancelBooking=(bookingId:string,requestedRefundCents:number,reason:string)=>rpc('v2_customer_cancel_booking',{p_booking_id:bookingId,p_requested_refund_cents:requestedRefundCents,p_reason:reason});
+
+
+// Revenue-gap rescue / T-24 customer rescue workflows
+export async function loadAdminRevenueRescues(){return select('v2_admin_revenue_rescues','opened_at',1000)}
+export async function loadAdminRevenueRescueContributions(){return select('v2_admin_revenue_rescue_contributions','created_at',2000)}
+export async function loadCustomerRescueOffers(){return select('v2_customer_my_rescue_offers','closes_at',250)}
+export const adminOpenRevenueRescue=(departureId:string,considerationId:string,closesAt:string)=>rpc('v2_admin_open_revenue_rescue',{p_departure_id:departureId,p_consideration_id:considerationId,p_closes_at:closesAt});
+export const adminCancelRevenueRescue=(campaignId:string)=>rpc('v2_admin_cancel_revenue_rescue',{p_campaign_id:campaignId});
+export const customerPledgeRescue=(campaignId:string,bookingId:string,amountCents:number)=>rpc('v2_customer_pledge_rescue',{p_campaign_id:campaignId,p_booking_id:bookingId,p_amount_cents:amountCents});
+export const adminRecordRescueContributionPaid=(contributionId:string,providerReference:string)=>rpc('v2_admin_record_rescue_contribution_paid',{p_contribution_id:contributionId,p_provider_reference:providerReference});
