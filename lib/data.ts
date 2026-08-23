@@ -104,3 +104,17 @@ export const captainStartJourney=(assignmentId:string)=>rpc('v2_captain_start_jo
 export const captainCompleteJourney=(assignmentId:string,normal:boolean,notes:string,incident:boolean,summary:string)=>rpc('v2_captain_complete_journey',{p_captain_assignment_id:assignmentId,p_completed_normally:normal,p_captain_notes:notes,p_incident_flag:incident,p_incident_summary:summary});
 export const adminReplySupportMessage=(conversationId:string,message:string)=>rpc('v2_admin_reply_support_message',{p_conversation_id:conversationId,p_message_text:message});
 export const adminCancelPendingNotification=(notificationId:string)=>rpc('v2_admin_cancel_pending_notification',{p_notification_id:notificationId});
+
+// Operator self-service / captain operational detail
+export async function loadOperatorConsiderations(){return select('v2_operator_my_considerations','scheduled_departure_ts',500)}
+export async function loadOperatorFleet(){return select('v2_operator_my_fleet','name',500)}
+export async function loadOperatorRouteOffers(){return select('v2_operator_my_route_offers','route_name',1000)}
+export async function loadOperatorUnavailability(){return select('v2_operator_my_unavailability','start_ts',1000)}
+export async function loadOperatorQuality(){return select('v2_operator_my_quality','operator_name',100)}
+export async function loadOperatorFairness(){return select('v2_operator_my_fairness','operator_name',500)}
+export const operatorWithdrawConsideration=(id:string,reason:string)=>rpc('v2_operator_withdraw_consideration',{p_consideration_id:id,p_reason:reason});
+export const operatorAddUnavailability=(vehicleId:string,start:string,end:string,reasonCode:string,reasonNote:string)=>rpc('v2_operator_add_unavailability',{p_vehicle_id:vehicleId,p_start_ts:start,p_end_ts:end,p_reason_code:reasonCode,p_reason_note:reasonNote});
+export const operatorRemoveUnavailability=(id:string)=>rpc('v2_operator_remove_unavailability',{p_exception_id:id});
+export const operatorSetRouteOfferActive=(id:string,active:boolean)=>rpc('v2_operator_set_route_offer_active',{p_offer_id:id,p_active:active});
+export async function loadCaptainManifest(){return select('v2_captain_my_manifest','scheduled_departure_ts',2000)}
+export async function loadCaptainMessages(){return select('v2_captain_my_messages','created_at',1000)}

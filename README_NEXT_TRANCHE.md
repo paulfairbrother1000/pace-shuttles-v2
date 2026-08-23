@@ -1,13 +1,30 @@
-# Pace Shuttles V2 — End-to-End Operations Tranche
+# Pace Shuttles V2 — Large Operations Tranche
 
-Backend migration has already been applied to the connected Pace Shuttles V2 Supabase project.
+This tranche extends the deployed V2 administration build into the three operational workspaces.
 
-This tranche adds:
-- authenticated operator dashboard scoped through operator memberships
-- authenticated captain operations workspace with Start Journey and Complete Journey actions
-- authenticated customer bookings and notification workspace
-- Site Admin support replies in the existing support conversation
-- cancellation control for pending notification queue items
-- preserves the large Site Admin operations tranche already deployed
+## Operator
+- Trips under consideration with live allocation position and withdrawal deadline
+- Protected operator withdrawal action (confirmed allocations cannot be withdrawn)
+- Fleet availability blocks and restoration
+- Route participation pause/activate
+- Confirmed journeys, commission, earnings and settlement state
+- Quality score/NPS evidence and fairness win/loss visibility
 
-Upload the unzipped contents over the repository root and commit to `main`.
+## Captain
+- Journey selection and operational status
+- Start/complete journey using protected V2 functions
+- Normal/abnormal completion, voyage notes and incident capture
+- Passenger manifest scoped to signed-in captain
+- Journey operational messages
+
+## Customer
+- Booking and departure status
+- Payment state, seats and value
+- Journey notification body/status display
+
+## Platform hardening
+- Exact duplicate pending notification cleanup and live de-duplication index
+- Role-scoped public API views
+- Protected operator self-service functions using authenticated operator membership
+
+The production Supabase migration has already been applied.

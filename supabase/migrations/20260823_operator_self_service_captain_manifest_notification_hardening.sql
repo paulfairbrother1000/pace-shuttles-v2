@@ -1,0 +1,3 @@
+-- Production migration already applied through Supabase on 2026-08-23.
+-- Operator self-service views/actions, captain manifest/messages, and notification de-duplication.
+-- Retained in repository as an implementation marker; do not re-run manually against production.
