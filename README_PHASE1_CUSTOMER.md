@@ -22,3 +22,13 @@ The `phase1_public_booking_experience` migration has already been applied to the
 
 ## Deployment
 Overlay this folder onto the repository root and commit to `main`.
+
+## Phase 1 final booking-flow tranche — 23 Aug 2026
+
+- Journey discovery now separates schedule discovery from live pricing: recurring departures display quickly with a **Check price** action.
+- Clicking **Check price** calls the shared V2 pricing/allocation engine for the selected whole party.
+- Successful live offers show all-in per-seat and party totals and progress to a held quote.
+- Sold-out whole-party and fairness-tie states are shown explicitly rather than as generic failures.
+- The planner surfaces the next available dates for the selected destination/pick-up and retains date, type and party filters.
+- Checkout now validates lead and passenger names, supports passenger age groups, displays a live quote-hold countdown, handles expiry, and preserves the whole-party-not-split rule.
+- Payment remains intentionally pending until Phase 2 Stripe integration.
