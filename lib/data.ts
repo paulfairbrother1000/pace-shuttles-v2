@@ -150,3 +150,15 @@ export const adminOpenRevenueRescue=(departureId:string,considerationId:string,c
 export const adminCancelRevenueRescue=(campaignId:string)=>rpc('v2_admin_cancel_revenue_rescue',{p_campaign_id:campaignId});
 export const customerPledgeRescue=(campaignId:string,bookingId:string,amountCents:number)=>rpc('v2_customer_pledge_rescue',{p_campaign_id:campaignId,p_booking_id:bookingId,p_amount_cents:amountCents});
 export const adminRecordRescueContributionPaid=(contributionId:string,providerReference:string)=>rpc('v2_admin_record_rescue_contribution_paid',{p_contribution_id:contributionId,p_provider_reference:providerReference});
+
+// Service scheduling and access management
+export async function loadAdminServices(){return select('v2_admin_services','name',1000)}
+export async function loadAdminAccessUsers(){return select('v2_admin_access_users','email',1000)}
+export const adminCreateService=(a:any)=>rpc('v2_admin_create_service',a);
+export const adminUpdateService=(a:any)=>rpc('v2_admin_update_service',a);
+export const adminGenerateDepartures=(from:string,to:string)=>rpc('v2_admin_generate_departures',{p_from:from,p_to:to});
+export const adminSetPlatformUser=(email:string,role:string,displayName:string)=>rpc('v2_admin_set_platform_user',{p_email:email,p_platform_role:role,p_display_name:displayName});
+export const adminLinkOperatorUser=(operatorId:string,email:string,role:string)=>rpc('v2_admin_link_operator_user',{p_operator_id:operatorId,p_email:email,p_role:role});
+export const adminSetOperatorMembershipActive=(membershipId:string,active:boolean)=>rpc('v2_admin_set_operator_membership_active',{p_membership_id:membershipId,p_active:active});
+export const adminLinkCaptainUser=(captainId:string,email:string)=>rpc('v2_admin_link_captain_user',{p_captain_id:captainId,p_email:email});
+export const adminUnlinkCaptainUser=(captainId:string)=>rpc('v2_admin_unlink_captain_user',{p_captain_id:captainId});
