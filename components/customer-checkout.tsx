@@ -1,25 +1,131 @@
 'use client';
 import Link from 'next/link';
-import {useEffect,useMemo,useState} from 'react';
-import {useSearchParams} from 'next/navigation';
+import {useEffect,useMemo,useRef,useState} from 'react';
+import {useRouter,useSearchParams} from 'next/navigation';
 import {getSupabaseBrowserClient} from '@/lib/supabase';
+
 const money=(c:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format((c||0)/100);
+const draftKey=(qid:string)=>`pace:checkout-draft:${qid}`;
+
+type Passenger={first_name:string;last_name:string;age_group:string};
+type CheckoutDraft={quoteId:string;name:string;last:string;email:string;leadAgeGroup:string;passengers:Passenger[];savedAt:number;expiresAt?:string};
+
 export default function Checkout(){
- const sp=useSearchParams(),qid=sp.get('q'),s=getSupabaseBrowserClient();
- const [q,setQ]=useState<any>(null),[session,setSession]=useState<any>(null),[name,setName]=useState(''),[email,setEmail]=useState(''),[last,setLast]=useState(''),[pass,setPass]=useState<any[]>([]),[msg,setMsg]=useState(''),[done,setDone]=useState<any>(null),[busy,setBusy]=useState(false),[now,setNow]=useState(Date.now());
- useEffect(()=>{const t=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(t)},[]);
- useEffect(()=>{(async()=>{if(!s||!qid)return;const [{data,error},{data:ss}]=await Promise.all([s.rpc('v2_public_get_quote_intent',{p_quote_id:qid}),s.auth.getSession()]);if(error){setMsg(error.message);return}const row=data?.[0];setQ(row||null);setSession(ss.session);if(ss.session?.user?.email)setEmail(ss.session.user.email);setPass(Array.from({length:row?.party_size||0},()=>({first_name:'',last_name:'',age_group:'adult'})))})()},[s,qid]);
+ const sp=useSearchParams(),qid=sp.get('q'),router=useRouter(),s=getSupabaseBrowserClient();
+ const [q,setQ]=useState<any>(null),[session,setSession]=useState<any>(null),[name,setName]=useState(''),[email,setEmail]=useState(''),[last,setLast]=useState(''),[leadAgeGroup,setLeadAgeGroup]=useState('adult'),[pass,setPass]=useState<Passenger[]>([]),[msg,setMsg]=useState(''),[done,setDone]=useState<any>(null),[busy,setBusy]=useState(false),[now,setNow]=useState(Date.now()),[password,setPassword]=useState(''),[showPassword,setShowPassword]=useState(false),[otpCooldown,setOtpCooldown]=useState(0),[restored,setRestored]=useState(false);
+ const requoteAttempted=useRef(false);
+
+ useEffect(()=>{const t=setInterval(()=>{setNow(Date.now());setOtpCooldown(x=>Math.max(0,x-1))},1000);return()=>clearInterval(t)},[]);
+
+ function restoreDraft(quoteId:string,partySize:number){
+  try{
+   const raw=localStorage.getItem(draftKey(quoteId));
+   if(!raw)return false;
+   const d=JSON.parse(raw) as CheckoutDraft;
+   const stale=Date.now()-Number(d.savedAt||0)>30*60*1000;
+   if(stale){localStorage.removeItem(draftKey(quoteId));return false;}
+   setName(d.name||'');setLast(d.last||'');setEmail(d.email||'');setLeadAgeGroup(d.leadAgeGroup||'adult');
+   const extras=Math.max(0,partySize-1);
+   setPass(Array.from({length:extras},(_,i)=>d.passengers?.[i]||{first_name:'',last_name:'',age_group:'adult'}));
+   setRestored(true);return true;
+  }catch{return false}
+ }
+
+ useEffect(()=>{(async()=>{
+  if(!s||!qid)return;
+  const [{data,error},{data:ss}]=await Promise.all([s.rpc('v2_public_get_quote_intent',{p_quote_id:qid}),s.auth.getSession()]);
+  if(error){setMsg(error.message);return}
+  const row=data?.[0];setQ(row||null);setSession(ss.session);
+  const gotDraft=row?restoreDraft(qid,row.party_size||1):false;
+  if(!gotDraft){
+   if(ss.session?.user?.email)setEmail(ss.session.user.email);
+   setPass(Array.from({length:Math.max(0,(row?.party_size||1)-1)},()=>({first_name:'',last_name:'',age_group:'adult'})));
+  } else if(ss.session?.user?.email){setEmail(ss.session.user.email)}
+  const {data:listener}=s.auth.onAuthStateChange((_event,next)=>{setSession(next);if(next?.user?.email)setEmail(next.user.email)});
+  return()=>listener.subscription.unsubscribe();
+ })()},[s,qid]);
+
+ useEffect(()=>{
+  if(!qid||!q||done)return;
+  const draft:CheckoutDraft={quoteId:qid,name,last,email,leadAgeGroup,passengers:pass,savedAt:Date.now(),expiresAt:q.expires_at};
+  try{localStorage.setItem(draftKey(qid),JSON.stringify(draft))}catch{}
+ },[qid,q,name,last,email,leadAgeGroup,pass,done]);
+
  const expired=useMemo(()=>q?new Date(q.expires_at).getTime()<=now:false,[q,now]);
  const remaining=useMemo(()=>q?Math.max(0,Math.ceil((new Date(q.expires_at).getTime()-now)/1000)):0,[q,now]);
- const passengerReady=pass.length>0&&pass.every(p=>String(p.first_name||'').trim()&&String(p.last_name||'').trim());
+ const passengerReady=pass.every(p=>String(p.first_name||'').trim()&&String(p.last_name||'').trim());
  const formReady=!!name.trim()&&!!last.trim()&&!!email.trim()&&passengerReady&&!expired;
- async function signIn(){if(!s||!email||expired)return;setBusy(true);setMsg('Sending secure sign-in link…');const {error}=await s.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.href}});setBusy(false);setMsg(error?.message||'Check your email for the secure sign-in link, then return here. Your held price remains valid until the time shown.')}
- async function reserve(){if(!s||!qid||!formReady)return;setBusy(true);setMsg('Preparing secure checkout…');const {data,error}=await s.rpc('v2_customer_commit_quote',{p_quote_id:qid,p_customer_name:name.trim(),p_customer_email:email.trim(),p_lead_last_name:last.trim(),p_passengers:pass});setBusy(false);if(error)setMsg(error.message);else{setDone(data?.[0]);setMsg('')}}
- async function pay(){if(!s||!done?.order_id)return;setBusy(true);setMsg('Opening secure payment…');const {data:{session}}=await s.auth.getSession();const r=await fetch('/api/stripe/create-checkout-session',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session?.access_token||''}`},body:JSON.stringify({orderId:done.order_id})});const j=await r.json();if(!r.ok){setBusy(false);setMsg(j.error||'Unable to start payment');return}if(j.url)window.location.assign(j.url)}
+
+ async function refreshQuote(){
+  if(!s||!q?.departure_id||busy)return;
+  setBusy(true);setMsg('Refreshing the live price…');
+  const {data,error}=await s.rpc('v2_public_create_quote_intent',{p_departure_id:q.departure_id,p_party_size:q.party_size});
+  setBusy(false);
+  if(error||!data){setMsg(error?.message||'Unable to refresh this journey.');return}
+  const newId=String(data);
+  try{
+   const old=localStorage.getItem(draftKey(qid!));
+   if(old){const d=JSON.parse(old);d.quoteId=newId;d.savedAt=Date.now();localStorage.setItem(draftKey(newId),JSON.stringify(d));localStorage.removeItem(draftKey(qid!));}
+  }catch{}
+  router.replace('/checkout?q='+encodeURIComponent(newId));
+ }
+
+ useEffect(()=>{
+  if(session&&q&&expired&&!requoteAttempted.current){requoteAttempted.current=true;void refreshQuote()}
+ },[session,q,expired]);
+
+ async function magicSignIn(){
+  if(!s||!email||expired||otpCooldown>0)return;
+  setBusy(true);setMsg('Sending secure sign-in link…');
+  const returnUrl=window.location.origin+window.location.pathname+window.location.search;
+  const {error}=await s.auth.signInWithOtp({email,options:{emailRedirectTo:returnUrl}});
+  setBusy(false);
+  if(error){setMsg(error.message);return}
+  setOtpCooldown(60);
+  setMsg('Check your email for the secure sign-in link. When you return, this journey and all passenger details will still be here.');
+ }
+
+ async function passwordSignIn(){
+  if(!s||!email||!password||expired)return;
+  setBusy(true);setMsg('Signing in…');
+  const {error}=await s.auth.signInWithPassword({email,password});
+  setBusy(false);
+  if(error){setMsg(error.message);return}
+  setPassword('');setShowPassword(false);setMsg('Signed in. Your checkout details have been preserved.');
+ }
+
+ async function reserve(){
+  if(!s||!qid||!formReady)return;
+  setBusy(true);setMsg('Preparing secure checkout…');
+  const passengers=[{first_name:name.trim(),last_name:last.trim(),age_group:leadAgeGroup},...pass];
+  const {data,error}=await s.rpc('v2_customer_commit_quote',{p_quote_id:qid,p_customer_name:name.trim(),p_customer_email:email.trim(),p_lead_last_name:last.trim(),p_passengers:passengers});
+  setBusy(false);
+  if(error){setMsg(error.message);return}
+  setDone(data?.[0]);setMsg('');
+  try{localStorage.removeItem(draftKey(qid))}catch{}
+ }
+
+ async function pay(){
+  if(!s||!done?.order_id)return;
+  setBusy(true);setMsg('Opening secure payment…');
+  const {data:{session}}=await s.auth.getSession();
+  const r=await fetch('/api/stripe/create-checkout-session',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session?.access_token||''}`},body:JSON.stringify({orderId:done.order_id})});
+  const j=await r.json();
+  if(!r.ok){setBusy(false);setMsg(j.error||'Unable to start payment');return}
+  if(j.url)window.location.assign(j.url)
+ }
+
  if(!qid)return <div className="ps-checkout"><p>Missing quote reference.</p><Link href="/book">Return to journeys</Link></div>;
  if(!q&&!msg)return <div className="ps-checkout"><p>Loading your journey…</p></div>;
  if(!q)return <div className="ps-checkout"><div className="ps-alert">{msg||'This quote is no longer available.'}</div><Link className="ps-primary" href="/book">Choose another journey</Link></div>;
  const snap=q.quote_snapshot||{};
  if(done)return <main className="ps-checkout"><div className="ps-confirm"><div className="ps-tick">✓</div><h1>Ready for secure payment</h1><p>{done.route_name}</p><strong>{money(done.total_cents)}</strong><p className="muted">No seats are reserved yet. After payment succeeds, Pace Shuttles immediately re-checks whole-party availability and books your seats together. If capacity disappears at that instant, the payment is automatically refunded in full.</p><button className="ps-primary wide" disabled={busy} onClick={pay}>{busy?'Opening payment…':`Pay ${money(done.total_cents)} securely`}</button>{msg&&<div className="ps-alert">{msg}</div>}<Link href="/book">Choose another journey</Link></div></main>;
- return <main className="ps-checkout"><header><Link href="/book">← Back to journeys</Link><b>Pace Shuttles</b></header><div className="ps-checkout-grid"><section><p className="eyebrow">Complete your booking</p><h1>{snap.pickup_name} → {snap.destination_name}</h1><p>{new Date(snap.scheduled_departure_ts).toLocaleString([],{weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})} · {q.party_size} seat{q.party_size===1?'':'s'}</p>{expired&&<div className="ps-alert">This held price has expired. Return to the journey list to obtain a fresh live price.</div>}<div className="ps-form"><label>Lead passenger first name<input autoComplete="given-name" value={name} onChange={e=>setName(e.target.value)}/></label><label>Lead passenger surname<input autoComplete="family-name" value={last} onChange={e=>setLast(e.target.value)}/></label><label>Email<input autoComplete="email" type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><h3>Passengers</h3>{pass.map((p,i)=><div className="ps-passenger" key={i}><input placeholder={`Passenger ${i+1} first name`} value={p.first_name} onChange={e=>setPass(a=>a.map((x,j)=>j===i?{...x,first_name:e.target.value}:x))}/><input placeholder="Last name" value={p.last_name} onChange={e=>setPass(a=>a.map((x,j)=>j===i?{...x,last_name:e.target.value}:x))}/><select aria-label={`Passenger ${i+1} age group`} value={p.age_group} onChange={e=>setPass(a=>a.map((x,j)=>j===i?{...x,age_group:e.target.value}:x))}><option value="adult">Adult</option><option value="child">Child</option><option value="infant">Infant</option></select></div>)}</div>{!session?<button className="ps-primary wide" disabled={!email||busy||expired} onClick={signIn}>{busy?'Sending…':'Sign in securely to continue'}</button>:<button className="ps-primary wide" disabled={!formReady||busy} onClick={reserve}>{busy?'Preparing…':'Continue to payment'}</button>}{msg&&<div className="ps-alert">{msg}</div>}</section><aside className="ps-summary"><h2>Journey summary</h2><div><span>Seat price</span><b>{money(q.unit_price_cents)}</b></div><div><span>Seats</span><b>{q.party_size}</b></div><div className="total"><span>Total incl. tax & fees</span><b>{money(q.total_price_cents)}</b></div><small>{expired?'Price hold expired.':`Live price held for ${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}.`}</small><p className="muted">Your whole party is kept together; Pace Shuttles will not split the booking across vehicles.</p></aside></div></main>;
+
+ return <main className="ps-checkout"><header><Link href="/book">← Back to journeys</Link><b>Pace Shuttles</b></header><div className="ps-checkout-grid"><section><p className="eyebrow">Complete your booking</p><h1>{snap.pickup_name} → {snap.destination_name}</h1><p>{new Date(snap.scheduled_departure_ts).toLocaleString([],{weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})} · {q.party_size} seat{q.party_size===1?'':'s'}</p>
+ {restored&&session&&<div className="ps-success">Welcome back. Your journey and passenger details have been restored.</div>}
+ {expired&&<div className="ps-alert">This live price has expired. Your passenger details are safe. <button className="link-button" disabled={busy} onClick={refreshQuote}>Refresh the live price and continue</button></div>}
+ <div className="ps-form"><label>Lead passenger first name<input autoComplete="given-name" value={name} onChange={e=>setName(e.target.value)}/></label><label>Lead passenger surname<input autoComplete="family-name" value={last} onChange={e=>setLast(e.target.value)}/></label><label>Email<input autoComplete="email" type="email" value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Lead passenger age group<select value={leadAgeGroup} onChange={e=>setLeadAgeGroup(e.target.value)}><option value="adult">Adult</option><option value="child">Child</option><option value="infant">Infant</option></select></label>
+ {pass.length>0&&<h3>Additional passenger{pass.length===1?'':'s'}</h3>}{pass.map((p,i)=><div className="ps-passenger" key={i}><input placeholder={`Passenger ${i+2} first name`} value={p.first_name} onChange={e=>setPass(a=>a.map((x,j)=>j===i?{...x,first_name:e.target.value}:x))}/><input placeholder="Last name" value={p.last_name} onChange={e=>setPass(a=>a.map((x,j)=>j===i?{...x,last_name:e.target.value}:x))}/><select aria-label={`Passenger ${i+2} age group`} value={p.age_group} onChange={e=>setPass(a=>a.map((x,j)=>j===i?{...x,age_group:e.target.value}:x))}><option value="adult">Adult</option><option value="child">Child</option><option value="infant">Infant</option></select></div>)}</div>
+ {!session?<div className="checkout-auth"><button className="ps-primary wide" disabled={!email||busy||expired||otpCooldown>0} onClick={magicSignIn}>{busy?'Sending…':otpCooldown>0?`Secure link sent · resend in ${otpCooldown}s`:'Email me a secure sign-in link'}</button><button className="auth-alt" type="button" onClick={()=>setShowPassword(x=>!x)}>{showPassword?'Hide password sign-in':'Already have a password? Sign in without email'}</button>{showPassword&&<div className="password-inline"><input type="password" autoComplete="current-password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)}/><button className="ps-secondary" disabled={!email||!password||busy||expired} onClick={passwordSignIn}>Sign in</button></div>}<p className="muted">Your selected journey and passenger details are saved in this browser while you authenticate. Signing in does not reserve seats.</p></div>:<button className="ps-primary wide" disabled={!formReady||busy} onClick={reserve}>{busy?'Preparing…':'Continue to payment'}</button>}
+ {msg&&<div className="ps-alert">{msg}</div>}</section><aside className="ps-summary"><h2>Journey summary</h2><div><span>Seat price</span><b>{money(q.unit_price_cents)}</b></div><div><span>Seats</span><b>{q.party_size}</b></div><div className="total"><span>Total incl. tax & fees</span><b>{money(q.total_price_cents)}</b></div><small>{expired?'Price hold expired — refresh without re-entering your details.':`Live price held for ${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}.`}</small><p className="muted">Your whole party is kept together; Pace Shuttles will not split the booking across vehicles.</p></aside></div></main>;
 }
