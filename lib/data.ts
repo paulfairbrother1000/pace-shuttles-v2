@@ -118,3 +118,14 @@ export const operatorRemoveUnavailability=(id:string)=>rpc('v2_operator_remove_u
 export const operatorSetRouteOfferActive=(id:string,active:boolean)=>rpc('v2_operator_set_route_offer_active',{p_offer_id:id,p_active:active});
 export async function loadCaptainManifest(){return select('v2_captain_my_manifest','scheduled_departure_ts',2000)}
 export async function loadCaptainMessages(){return select('v2_captain_my_messages','created_at',1000)}
+
+
+// Customer feedback/support, captain messaging, operator commercial controls
+export async function loadCustomerFeedback(){return select('v2_customer_my_feedback','created_at',250)}
+export async function loadCustomerSupport(){return select('v2_customer_my_support','updated_at',250)}
+export async function loadCustomerSupportMessages(){return select('v2_customer_my_support_messages','created_at',1000)}
+export const customerSubmitFeedback=(bookingId:string,nps:number,rating:number,comment:string,attribution:string)=>rpc('v2_customer_submit_feedback',{p_booking_id:bookingId,p_nps:nps,p_operator_rating:rating,p_comment:comment,p_attribution:attribution});
+export const customerOpenSupport=(bookingId:string,message:string,category:string)=>rpc('v2_customer_open_support',{p_booking_id:bookingId,p_message:message,p_category:category});
+export const customerReplySupport=(conversationId:string,message:string)=>rpc('v2_customer_reply_support',{p_conversation_id:conversationId,p_message:message});
+export const captainSendJourneyMessage=(allocationId:string,message:string,category:string)=>rpc('v2_captain_send_journey_message',{p_confirmed_allocation_id:allocationId,p_message:message,p_category:category});
+export const operatorUpdateRouteOffer=(offerId:string,minSeats:number,maxSeats:number,minRevenueCents:number,preferred:boolean,threshold:number|null,discountEnabled:boolean,discountBps:number)=>rpc('v2_operator_update_route_offer',{p_offer_id:offerId,p_min_seats:minSeats,p_max_seats:maxSeats,p_min_revenue_cents:minRevenueCents,p_preferred:preferred,p_threshold:threshold,p_discount_enabled:discountEnabled,p_discount_bps:discountBps});

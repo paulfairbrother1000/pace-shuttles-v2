@@ -1,13 +1,12 @@
-# Implementation status
+# Implementation status — large workflow tranche
 
-Completed in this tranche:
-- Operator participation and withdrawal UX/backend
-- Operator vehicle unavailability UX/backend
-- Operator route participation UX/backend
-- Operator quality/fairness visibility
-- Captain manifest and journey messages
-- Captain voyage lifecycle UX
-- Expanded customer journey view
-- Notification duplicate hardening
+Backend migration: APPLIED successfully to production Supabase project.
+Frontend: updated `lib/data.ts` and `components/pages.tsx`.
 
-Build note: package installation exceeded the local execution window, so Vercel remains the authoritative Next.js production build check.
+Major functional additions:
+1. Operator route-offer editing and improved availability entry.
+2. Captain-to-customer operational journey updates, queued as in-app notifications.
+3. Customer booking-linked support and conversation replies.
+4. Customer post-completion NPS/operator feedback feeding the quality model.
+
+Build note: local npm dependency installation exceeded the execution window, so Vercel remains the final build/type validation.
