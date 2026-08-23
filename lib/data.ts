@@ -12,6 +12,8 @@ export async function loadOperatorJourneys(){return select('v2_operator_my_dashb
 export async function loadOperatorLiabilities(){return select('v2_api_operator_liabilities','created_at',250)}
 export async function loadCustomerBookings(){return select('v2_customer_my_orders','scheduled_departure_ts',250)}
 export async function loadCustomerNotifications(){return select('v2_customer_my_notifications','created_at',250)}
+export const customerMarkNotificationRead=(notificationId:string)=>rpc('v2_customer_mark_notification_read',{p_notification_id:notificationId});
+export const customerMarkAllNotificationsRead=()=>rpc('v2_customer_mark_all_notifications_read',{});
 export async function loadSupportInbox(){return select('v2_api_support_inbox','updated_at',250)}
 export async function loadOperators(){return select('v2_operators','name',250)}
 export async function loadSettlements(){return select('v2_admin_finance_settlements','due_at',500)}

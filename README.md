@@ -10,3 +10,7 @@ After Vercel reports `Ready`, verify:
 2. Support shows conversations, messages and ticket actions.
 3. Configuration shows user roles, scheduler/system health and notifications.
 4. Existing Finance, Routes & Network, Operators and Journey screens still load correctly.
+
+
+## Latest customer communications tranche
+See `README_CUSTOMER_NOTIFICATIONS.md` for payment, booking, reminder and journey-update notifications.
