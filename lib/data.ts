@@ -83,3 +83,8 @@ export const adminApplyOperatorLiabilities=(settlementId:string)=>rpc('v2_admin_
 export const adminApproveSettlement=(settlementId:string)=>rpc('v2_admin_approve_settlement',{p_settlement_id:settlementId});
 export const adminMarkSettlementSent=(settlementId:string,externalReference:string)=>rpc('v2_admin_mark_settlement_sent',{p_settlement_id:settlementId,p_external_reference:externalReference});
 export const adminReconcileSettlementPaid=(settlementId:string,externalReference:string)=>rpc('v2_admin_reconcile_settlement_paid',{p_settlement_id:settlementId,p_external_reference:externalReference});
+
+export async function loadAdminVehicleConsiderations(){return select('v2_admin_vehicle_considerations','updated_at',1000)}
+export const adminProcessDepartureT72=(departureId:string,force=false)=>rpc('v2_admin_process_departure_t72',{p_departure_id:departureId,p_force:force});
+export const adminProcessDepartureT24=(departureId:string,force=false)=>rpc('v2_admin_process_departure_t24',{p_departure_id:departureId,p_force:force});
+export const adminRefreshLiveConsiderations=(departureId:string)=>rpc('v2_admin_refresh_live_considerations',{p_departure_id:departureId});
