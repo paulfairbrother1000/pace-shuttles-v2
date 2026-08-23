@@ -38,6 +38,9 @@ export async function rpc(name:string,args:Record<string,any>={}){
 export async function loadVehicleTypes(){return select('v2_vehicle_types','display_order',250)}
 export async function loadVehicleRouteOffers(){return select('v2_vehicle_route_offers','created_at',1000)}
 export async function loadVehicleUnavailability(){return select('v2_vehicle_availability_exceptions','start_ts',1000)}
+export async function loadCountryCommissions(){return select('v2_country_commissions','effective_from',500)}
+export async function loadOperatorCommissionOverrides(){return select('v2_operator_commission_overrides','effective_from',500)}
+export async function loadCancellationPolicies(){return select('v2_cancellation_policies','name',250)}
 export const adminAutoAssignCaptain=(allocationId:string)=>rpc('v2_admin_auto_assign_captain',{p_confirmed_allocation_id:allocationId});
 export const adminAssignCaptain=(allocationId:string,captainId:string,reason:string)=>rpc('v2_admin_assign_captain',{p_confirmed_allocation_id:allocationId,p_captain_id:captainId,p_reason:reason});
 export const adminRefreshConsiderations=(departureId:string)=>rpc('v2_admin_refresh_vehicle_considerations',{p_departure_id:departureId,p_engine_version:'admin-ui-v1'});
@@ -49,3 +52,9 @@ export const adminSetCaptainVehicleType=(captainId:string,vehicleTypeId:string,a
 export const adminCreateRouteOffer=(a:any)=>rpc('v2_admin_create_route_offer',a);
 export const adminSetRouteOfferActive=(offerId:string,active:boolean)=>rpc('v2_admin_set_route_offer_active',{p_offer_id:offerId,p_active:active});
 export const adminAddVehicleUnavailability=(a:any)=>rpc('v2_admin_add_vehicle_unavailability',a);
+
+export const adminCreateOperator=(a:any)=>rpc('v2_admin_create_operator',a);
+export const adminUpdateOperator=(a:any)=>rpc('v2_admin_update_operator',a);
+export const adminSetCountryCommission=(countryId:string,bps:number,note:string)=>rpc('v2_admin_set_country_commission',{p_country_id:countryId,p_commission_bps:bps,p_note:note});
+export const adminSetOperatorCommissionOverride=(operatorId:string,bps:number,reason:string)=>rpc('v2_admin_set_operator_commission_override',{p_operator_id:operatorId,p_commission_bps:bps,p_reason:reason});
+export const adminEndOperatorCommissionOverride=(operatorId:string)=>rpc('v2_admin_end_operator_commission_override',{p_operator_id:operatorId});
