@@ -8,10 +8,10 @@ async function select(table:string, order?:string, limit=500){
   const {data,error}=await q; return {data:(data??[]) as DbRow[],error};
 }
 export async function loadAdminJourneys(){return select('v2_api_admin_live_operations','scheduled_departure_ts',250)}
-export async function loadOperatorJourneys(){return select('v2_api_operator_journeys','scheduled_departure_ts',250)}
+export async function loadOperatorJourneys(){return select('v2_operator_my_dashboard','scheduled_departure_ts',250)}
 export async function loadOperatorLiabilities(){return select('v2_api_operator_liabilities','created_at',250)}
-export async function loadCustomerBookings(){return select('v2_api_customer_bookings','scheduled_departure_ts',250)}
-export async function loadCustomerNotifications(){return select('v2_api_customer_notifications','created_at',250)}
+export async function loadCustomerBookings(){return select('v2_customer_my_bookings','scheduled_departure_ts',250)}
+export async function loadCustomerNotifications(){return select('v2_customer_my_notifications','created_at',250)}
 export async function loadSupportInbox(){return select('v2_api_support_inbox','updated_at',250)}
 export async function loadOperators(){return select('v2_operators','name',250)}
 export async function loadSettlements(){return select('v2_admin_finance_settlements','due_at',500)}
@@ -98,3 +98,9 @@ export const adminSetDepartureRisk=(departureId:string,atRisk:boolean,reason:str
 export const adminProcessDepartureT72=(departureId:string,force=false)=>rpc('v2_admin_process_departure_t72',{p_departure_id:departureId,p_force:force});
 export const adminProcessDepartureT24=(departureId:string,force=false)=>rpc('v2_admin_process_departure_t24',{p_departure_id:departureId,p_force:force});
 export const adminRefreshLiveConsiderations=(departureId:string)=>rpc('v2_admin_refresh_live_considerations',{p_departure_id:departureId});
+
+export async function loadCaptainMyJourneys(){return select('v2_captain_my_journeys','scheduled_departure_ts',250)}
+export const captainStartJourney=(assignmentId:string)=>rpc('v2_captain_start_journey',{p_captain_assignment_id:assignmentId});
+export const captainCompleteJourney=(assignmentId:string,normal:boolean,notes:string,incident:boolean,summary:string)=>rpc('v2_captain_complete_journey',{p_captain_assignment_id:assignmentId,p_completed_normally:normal,p_captain_notes:notes,p_incident_flag:incident,p_incident_summary:summary});
+export const adminReplySupportMessage=(conversationId:string,message:string)=>rpc('v2_admin_reply_support_message',{p_conversation_id:conversationId,p_message_text:message});
+export const adminCancelPendingNotification=(notificationId:string)=>rpc('v2_admin_cancel_pending_notification',{p_notification_id:notificationId});
