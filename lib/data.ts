@@ -25,3 +25,8 @@ export async function loadCaptains(){return select('v2_captains','first_name',50
 export async function loadAdminLiveOperationsDetail(){return select('v2_admin_live_operations_detail','scheduled_departure_ts',500)}
 export async function loadAdminJourneyBookings(){return select('v2_admin_journey_bookings','booked_at',1000)}
 export async function loadAdminJourneyAllocations(){return select('v2_admin_journey_allocations','confirmed_at',500)}
+
+export async function loadRoutePerformance(){return select('v2_admin_route_performance','route_name',500)}
+export async function loadCountryPerformance(){return select('v2_admin_country_performance','country_name',250)}
+export async function loadDestinationPerformance(){return select('v2_admin_destination_performance','destination_name',500)}
+export async function loadOperatorPerformance(){return select('v2_admin_operator_performance','operator_name',500)}
