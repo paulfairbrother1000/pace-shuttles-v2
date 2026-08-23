@@ -14,7 +14,8 @@ export async function loadCustomerBookings(){return select('v2_api_customer_book
 export async function loadCustomerNotifications(){return select('v2_api_customer_notifications','created_at',250)}
 export async function loadSupportInbox(){return select('v2_api_support_inbox','updated_at',250)}
 export async function loadOperators(){return select('v2_operators','name',250)}
-export async function loadSettlements(){return select('v2_settlements','created_at',250)}
+export async function loadSettlements(){return select('v2_admin_finance_settlements','due_at',500)}
+export async function loadLedgerSummary(){return select('v2_admin_ledger_summary','account_code',500)}
 export async function loadCountries(){return select('v2_countries','name',250)}
 export async function loadRoutes(){return select('v2_routes','route_name',500)}
 export async function loadDestinations(){return select('v2_destinations','name',500)}
@@ -76,3 +77,9 @@ export const adminSetOperatorVehicleType=(operatorId:string,vehicleTypeId:string
 export const adminUpdateRoute=(a:any)=>rpc('v2_admin_update_route',a);
 export const adminUpdatePickup=(a:any)=>rpc('v2_admin_update_pickup',a);
 export const adminUpdateDestination=(a:any)=>rpc('v2_admin_update_destination',a);
+
+export const adminCreateSettlement=(allocationId:string,dueAt:string)=>rpc('v2_admin_create_settlement',{p_confirmed_allocation_id:allocationId,p_due_at:dueAt});
+export const adminApplyOperatorLiabilities=(settlementId:string)=>rpc('v2_admin_apply_operator_liabilities',{p_settlement_id:settlementId});
+export const adminApproveSettlement=(settlementId:string)=>rpc('v2_admin_approve_settlement',{p_settlement_id:settlementId});
+export const adminMarkSettlementSent=(settlementId:string,externalReference:string)=>rpc('v2_admin_mark_settlement_sent',{p_settlement_id:settlementId,p_external_reference:externalReference});
+export const adminReconcileSettlementPaid=(settlementId:string,externalReference:string)=>rpc('v2_admin_reconcile_settlement_paid',{p_settlement_id:settlementId,p_external_reference:externalReference});

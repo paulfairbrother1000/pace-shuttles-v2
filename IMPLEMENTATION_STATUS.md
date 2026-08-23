@@ -26,3 +26,11 @@
 - Customer quote/booking/payment path.
 - Captain start/end/voyage-log mutations and PWA offline cache.
 - End-to-end tests and deployment pipeline.
+
+
+## Finance administration tranche
+- Site-admin settlement control view is now wired to live V2 settlement data.
+- Finance screen shows journey value, Pace commission, net payable and open operator liability exposure.
+- Site Admin can apply operator liabilities, approve settlements, mark approved payouts as sent, and reconcile sent/paid settlements.
+- Ledger account balances are surfaced for finance reconciliation.
+- Protected public RPC wrappers enforce Site Admin authorization and call the existing V2 finance business functions.
