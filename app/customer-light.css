@@ -1,0 +1,240 @@
+/* Pace Shuttles V2 customer-facing light theme.
+   Scope: public booking, checkout/auth continuation and My Journeys.
+   Site Admin / Operator / Captain operational workspaces are unchanged. */
+
+.ps-public,
+.ps-checkout,
+.ps-customer-account{
+  min-height:100vh;
+  background:#f7f9fc!important;
+  color:#0d1f44!important;
+}
+
+/* Public discovery / booking */
+.ps-intro{background:#f7f9fc!important}
+.ps-intro h1,
+.ps-section h2,
+.ps-planner-head h1,
+.ps-planner-head h2,
+.ps-discovery h1,
+.ps-discovery h2,
+.ps-checkout h1,
+.ps-checkout h2,
+.ps-checkout h3,
+.ps-customer-account h1,
+.ps-customer-account h2,
+.ps-customer-account h3{color:#0d1f44!important}
+.ps-intro h1 em{color:#0b5cff!important}
+.ps-intro p,
+.ps-discovery-label,
+.ps-journey p,
+.ps-journey small,
+.ps-price span,
+.ps-price small,
+.ps-checkout .muted,
+.ps-customer-account .muted{color:#66738d!important}
+.ps-public .eyebrow,
+.ps-checkout .eyebrow,
+.ps-customer-account .eyebrow{color:#0b5cff!important}
+.ps-footer{color:#66738d!important}
+
+/* Preserve the V1 photographic destination / pickup cards.
+   Only the surrounding UI moves to a light high-contrast surface. */
+.ps-discovery-panel{
+  background:#fff!important;
+  border-color:#dce4ef!important;
+  box-shadow:0 8px 30px rgba(13,31,68,.06);
+}
+.ps-back-chip,
+.ps-discovery-tabs button{
+  background:#fff!important;
+  color:#24446f!important;
+  border-color:#cbd7e8!important;
+}
+.ps-discovery-tabs{border-bottom-color:#dce4ef!important}
+.ps-discovery-tabs button.active{
+  background:#0b5cff!important;
+  border-color:#0b5cff!important;
+  color:#fff!important;
+}
+.ps-date-grid button{
+  background:#fff!important;
+  border-color:#cbd7e8!important;
+  color:#16345d!important;
+}
+.ps-date-grid button:hover,
+.ps-date-grid button:focus-visible{
+  border-color:#0b5cff!important;
+  box-shadow:0 0 0 3px rgba(11,92,255,.10);
+}
+
+/* Journey results */
+.ps-journey{
+  background:#fff!important;
+  border-color:#dce4ef!important;
+  color:#0d1f44!important;
+  box-shadow:0 5px 20px rgba(13,31,68,.05);
+}
+.ps-journey h3,
+.ps-price strong{color:#0d1f44!important}
+.ps-filters label,
+.ps-planner-head label{color:#52627c!important}
+.ps-filters select,
+.ps-filters input,
+.ps-planner-head select{
+  background:#fff!important;
+  color:#0d1f44!important;
+  border-color:#cbd7e8!important;
+}
+.ps-empty,
+.ps-catalog-empty{
+  background:#fff!important;
+  border-color:#cbd7e8!important;
+  color:#52627c!important;
+}
+.ps-catalog-empty b{color:#0d1f44!important}
+.ps-catalog-empty p{color:#66738d!important}
+
+/* Checkout and inline authentication */
+.ps-checkout>header{color:#24446f!important}
+.ps-checkout>header b{color:#0d1f44!important}
+.ps-form input,
+.ps-form select,
+.ps-passenger input,
+.ps-passenger select,
+.password-inline input{
+  background:#fff!important;
+  color:#0d1f44!important;
+  border:1px solid #cbd7e8!important;
+}
+.ps-form input:focus,
+.ps-form select:focus,
+.ps-passenger input:focus,
+.ps-passenger select:focus,
+.password-inline input:focus{
+  outline:none;
+  border-color:#0b5cff!important;
+  box-shadow:0 0 0 3px rgba(11,92,255,.10);
+}
+.ps-summary,
+.ps-confirm{
+  background:#fff!important;
+  color:#0d1f44!important;
+  border:1px solid #dce4ef!important;
+  box-shadow:0 8px 30px rgba(13,31,68,.07);
+}
+.ps-summary>div{border-bottom-color:#e6ebf2!important}
+.ps-summary small{color:#66738d!important}
+.checkout-auth{
+  margin-top:18px;
+  padding:18px;
+  border:1px solid #dce4ef;
+  border-radius:14px;
+  background:#fff;
+}
+.auth-alt,
+.link-button{
+  color:#0b5cff!important;
+  background:transparent!important;
+  border:0;
+  cursor:pointer;
+  text-decoration:underline;
+}
+.ps-secondary{
+  background:#fff;
+  color:#0b5cff;
+  border:1px solid #a9c2ef;
+  border-radius:10px;
+  padding:11px 16px;
+  font-weight:800;
+  cursor:pointer;
+}
+.ps-alert{
+  background:#fff7e8!important;
+  color:#8a5600!important;
+  border:1px solid #f4d89d;
+}
+.ps-success{
+  background:#edf9f2;
+  color:#087440;
+  border:1px solid #bde7cf;
+  border-radius:10px;
+  padding:12px 14px;
+  margin:12px 0;
+}
+
+/* My Journeys: customer account gets its own light shell rather than AdminShell/navy sidebar. */
+.ps-customer-header{
+  height:64px;
+  background:#fff;
+  border-bottom:1px solid #e1e7f0;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  padding:0 max(20px,calc((100vw - 1120px)/2));
+  position:sticky;
+  top:0;
+  z-index:30;
+}
+.ps-customer-brand{
+  font-size:18px;
+  font-weight:850;
+  color:#0d1f44;
+}
+.ps-customer-header nav{display:flex;gap:8px}
+.ps-customer-header nav a{
+  padding:8px 13px;
+  border-radius:999px;
+  color:#24446f;
+  font-size:14px;
+}
+.ps-customer-header nav a.active{
+  background:#0b5cff;
+  color:#fff;
+}
+.ps-customer-content{
+  width:min(1120px,calc(100% - 32px));
+  margin:0 auto;
+  padding:34px 0 80px;
+}
+.ps-customer-title{margin-bottom:22px}
+.ps-customer-title h1{margin:0 0 5px;font-size:32px}
+.ps-customer-title p{margin:0;color:#66738d}
+
+/* CustomerSearch reuses generic V2 cards; force them light inside customer account only. */
+.ps-customer-account .card,
+.ps-customer-account .section,
+.ps-customer-account .notice,
+.ps-customer-account .support-item,
+.ps-customer-account .message,
+.ps-customer-account .mini-metric{
+  background:#fff!important;
+  color:#0d1f44!important;
+  border-color:#dce4ef!important;
+}
+.ps-customer-account .support-item.selected,
+.ps-customer-account .message.customer{background:#edf4ff!important}
+.ps-customer-account .status{color:inherit}
+.ps-customer-account input,
+.ps-customer-account select,
+.ps-customer-account textarea{
+  background:#fff!important;
+  color:#0d1f44!important;
+  border-color:#cbd7e8!important;
+}
+.ps-customer-account .data-note,
+.ps-customer-account small{color:#66738d}
+
+@media(max-width:800px){
+  .ps-public,
+  .ps-checkout,
+  .ps-customer-account{background:#fff!important}
+  .ps-checkout{padding-left:16px;padding-right:16px}
+  .ps-summary{box-shadow:none}
+  .ps-customer-header{padding:0 14px}
+  .ps-customer-header nav{gap:2px}
+  .ps-customer-header nav a{font-size:12px;padding:7px 9px}
+  .ps-customer-content{width:min(100% - 24px,1120px);padding-top:22px}
+  .ps-customer-title h1{font-size:27px}
+}
