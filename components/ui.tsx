@@ -7,24 +7,65 @@ import { LayoutDashboard, Activity, BookOpen, Users, MapPinned, BarChart3, Walle
 
 export function Brand(){ return <div className="brand"><div className="brandmark">P</div><div><b>Pace</b><small>SHUTTLES</small></div></div> }
 
-const nav = [
-  ['/admin','Dashboard',LayoutDashboard],['/admin/live-operations','Live Operations',Activity],['/admin/journeys','Journeys',BookOpen],['/admin/operators','Operators',Users],['/admin/network','Routes & Network',MapPinned],['/admin/analytics','Analytics',BarChart3],['/admin/finance','Finance',WalletCards],['/admin/support','Support',Headphones],['/admin/settings','Configuration',Settings]
+const adminNav = [
+  ['/admin','Dashboard',LayoutDashboard],
+  ['/admin/live-operations','Live Operations',Activity],
+  ['/admin/journeys','Journeys',BookOpen],
+  ['/admin/operators','Operators',Users],
+  ['/admin/network','Routes & Network',MapPinned],
+  ['/admin/analytics','Analytics',BarChart3],
+  ['/admin/finance','Finance',WalletCards],
+  ['/admin/support','Support',Headphones],
+  ['/admin/settings','Configuration',Settings]
 ] as const;
+
+const operatorNav = [['/operator','Operator Dashboard',LayoutDashboard]] as const;
+const captainNav = [['/captain','Captain Dashboard',ShipWheel]] as const;
 
 export function AdminShell({children,title,subtitle}:{children:ReactNode,title:string,subtitle?:string}){
   const path=usePathname();
   const params=useSearchParams();
   const operator=params.get('operator');
+  const isAdmin=path.startsWith('/admin');
+  const nav=isAdmin?adminNav:path.startsWith('/operator')?operatorNav:path.startsWith('/captain')?captainNav:adminNav;
+
   return <div className="app-shell">
-    <aside className="sidebar"><Brand/><nav>{nav.map(([href,label,Icon])=><Link key={href} href={href} className={path===href||path.startsWith(href+'/')?'active':''}><Icon size={18}/><span>{label}</span></Link>)}</nav><div className="sidebar-footer"><button><Menu size={18}/>Collapse menu</button></div></aside>
-    <main className="main"><header className="topbar"><div><h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</div><div className="top-actions"><select defaultValue="Global"><option>Global</option><option>Antigua & Barbuda</option><option>Barbados</option><option>BVI</option></select><select defaultValue="This Month"><option>Today</option><option>This Month</option><option>Last 30 Days</option></select><button className="icon-btn"><Bell size={18}/></button><button className="avatar avatar-btn" title="Sign out" onClick={()=>getSupabaseBrowserClient()?.auth.signOut()}>AD</button></div></header>
-    {operator&&<div className="operator-banner">Managing operator: <strong>{operator==='barefoot'?'Barefoot':operator}</strong><Link href={path}>Exit operator management</Link></div>}
-    <div className="content">{children}</div></main>
-    <MobileNav />
+    <aside className="sidebar">
+      <Brand/>
+      <nav>{nav.map(([href,label,Icon])=><Link key={href} href={href} className={path===href||path.startsWith(href+'/')?'active':''}><Icon size={18}/><span>{label}</span></Link>)}</nav>
+      <div className="sidebar-footer"><button><Menu size={18}/>Collapse menu</button></div>
+    </aside>
+
+    <main className="main">
+      <header className="topbar">
+        <div><h1>{title}</h1>{subtitle&&<p>{subtitle}</p>}</div>
+        <div className="top-actions">
+          {isAdmin&&<>
+            <select defaultValue="Global" aria-label="Country context"><option>Global</option><option>Antigua & Barbuda</option><option>Barbados</option><option>BVI</option></select>
+            <select defaultValue="This Month" aria-label="Reporting period"><option>Today</option><option>This Month</option><option>Last 30 Days</option></select>
+            <button className="icon-btn" title="Notifications"><Bell size={18}/></button>
+          </>}
+          <button className="avatar avatar-btn" title="Sign out" onClick={()=>getSupabaseBrowserClient()?.auth.signOut()}>{isAdmin?'AD':path.startsWith('/operator')?'OP':'CP'}</button>
+        </div>
+      </header>
+      {operator&&isAdmin&&<div className="operator-banner">Managing operator: <strong>{operator==='barefoot'?'Barefoot':operator}</strong><Link href={path}>Exit operator management</Link></div>}
+      <div className="content">{children}</div>
+    </main>
+    {isAdmin&&<MobileNav/>}
   </div>
 }
 
-export function MobileNav(){const path=usePathname(); const items=[['/admin','Home',LayoutDashboard],['/admin/live-operations','Operations',Activity],['/admin/journeys','Journeys',BookOpen],['/admin/operators','Operators',Users],['/admin/support','More',MoreHorizontal]] as const; return <nav className="mobile-nav">{items.map(([href,label,Icon])=><Link href={href} key={href} className={path===href||path.startsWith(href+'/')?'active':''}><Icon size={20}/><span>{label}</span></Link>)}</nav>}
+export function MobileNav(){
+  const path=usePathname();
+  const items=[
+    ['/admin','Home',LayoutDashboard],
+    ['/admin/live-operations','Operations',Activity],
+    ['/admin/journeys','Journeys',BookOpen],
+    ['/admin/operators','Operators',Users],
+    ['/admin/support','More',MoreHorizontal]
+  ] as const;
+  return <nav className="mobile-nav">{items.map(([href,label,Icon])=><Link href={href} key={href} className={path===href||path.startsWith(href+'/')?'active':''}><Icon size={20}/><span>{label}</span></Link>)}</nav>
+}
 
 export function KpiCard({label,value,delta}:{label:string,value:string,delta?:string}){return <div className="card kpi"><span>{label}</span><strong>{value}</strong>{delta&&<small className="up">↑ {delta}</small>}<div className="spark"><i/><i/><i/><i/><i/><i/><i/></div></div>}
 export function Section({title,action,children,className=''}:{title:string,action?:ReactNode,children:ReactNode,className?:string}){return <section className={`card section ${className}`}><div className="section-head"><h2>{title}</h2>{action}</div>{children}</section>}
