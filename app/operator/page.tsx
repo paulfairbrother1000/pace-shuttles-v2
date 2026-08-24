@@ -1,2 +1,13 @@
-import { Suspense } from 'react'; import { AdminShell } from '@/components/ui'; import { OperatorMobile } from '@/components/pages';
-export default function Page(){return <Suspense><AdminShell title="Barefoot Dashboard" subtitle="Operator mobile-first operations"><OperatorMobile/></AdminShell></Suspense>}
+import { Suspense } from 'react';
+import { AdminShell } from '@/components/ui';
+import { OperatorDashboard } from '@/components/operator-dashboard';
+
+export default function Page(){
+  return (
+    <Suspense>
+      <AdminShell title="Operator Dashboard" subtitle="Journeys, availability, fleet, earnings and allocation transparency">
+        <OperatorDashboard/>
+      </AdminShell>
+    </Suspense>
+  );
+}
