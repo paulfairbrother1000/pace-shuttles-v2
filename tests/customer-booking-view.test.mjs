@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {visibleBookableJourneys} from '../lib/customer-booking-view.ts';
+import {visibleBookableJourneys,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
 
 test('shows only journeys that can still become or already are bookable',()=>{
   const rows=[
@@ -11,9 +11,14 @@ test('shows only journeys that can still become or already are bookable',()=>{
     {departure_id:'unavailable',quote_status:'unavailable'},
     {departure_id:'fairness',quote_status:'fairness_required'},
   ];
+  assert.deepEqual(visibleBookableJourneys(rows).map(row=>row.departure_id),['offer','checking','loading']);
+});
 
-  assert.deepEqual(
-    visibleBookableJourneys(rows).map(row=>row.departure_id),
-    ['offer','checking','loading'],
-  );
+test('each journey defaults independently to one seat',()=>{
+  assert.deepEqual(defaultJourneyPartySizes([{departure_id:'a'},{departure_id:'b'}]),{a:1,b:1});
+});
+
+test('changing one journey seat count does not change another journey',()=>{
+  const current={a:1,b:1};
+  assert.deepEqual(setJourneyPartySize(current,'b',3),{a:1,b:3});
 });
