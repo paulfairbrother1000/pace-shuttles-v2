@@ -1,72 +1,58 @@
-/* Pace Shuttles V2 customer-facing light theme.
-   Scope: public booking, checkout/auth continuation and My Journeys.
-   Site Admin / Operator / Captain operational workspaces are unchanged. */
+/* Pace Shuttles V2 customer/public light theme */
 
 .ps-public,
 .ps-checkout,
 .ps-customer-account{
-  min-height:100vh;
   background:#f7f9fc!important;
   color:#0d1f44!important;
 }
 
-/* Public discovery / booking */
-.ps-intro{background:#f7f9fc!important}
-.ps-intro h1,
-.ps-section h2,
-.ps-planner-head h1,
-.ps-planner-head h2,
-.ps-discovery h1,
-.ps-discovery h2,
-.ps-checkout h1,
-.ps-checkout h2,
-.ps-checkout h3,
-.ps-customer-account h1,
-.ps-customer-account h2,
-.ps-customer-account h3{color:#0d1f44!important}
-.ps-intro h1 em{color:#0b5cff!important}
-.ps-intro p,
-.ps-discovery-label,
-.ps-journey p,
-.ps-journey small,
-.ps-price span,
-.ps-price small,
-.ps-checkout .muted,
-.ps-customer-account .muted{color:#66738d!important}
-.ps-public .eyebrow,
-.ps-checkout .eyebrow,
-.ps-customer-account .eyebrow{color:#0b5cff!important}
-.ps-footer{color:#66738d!important}
-
-/* Preserve the V1 photographic destination / pickup cards.
-   Only the surrounding UI moves to a light high-contrast surface. */
+/* Public booking header and discovery */
+.ps-public-header{
+  background:#fff!important;
+  border-bottom:1px solid #e1e7f0!important;
+  color:#0d1f44!important;
+}
+.ps-public-header nav a{color:#52627c!important}
+.ps-public-header nav a.active{color:#0b5cff!important}
+.ps-intro,
+.ps-section,
 .ps-discovery-panel{
+  color:#0d1f44;
+}
+.ps-intro p,
+.ps-section .muted,
+.ps-discovery-label{color:#66738d!important}
+.ps-country-card,
+.ps-destination-card,
+.ps-type-card{
   background:#fff!important;
+  color:#0d1f44!important;
   border-color:#dce4ef!important;
-  box-shadow:0 8px 30px rgba(13,31,68,.06);
+  box-shadow:0 5px 20px rgba(13,31,68,.05);
 }
-.ps-back-chip,
-.ps-discovery-tabs button{
-  background:#fff!important;
-  color:#24446f!important;
-  border-color:#cbd7e8!important;
-}
-.ps-discovery-tabs{border-bottom-color:#dce4ef!important}
-.ps-discovery-tabs button.active{
-  background:#0b5cff!important;
-  border-color:#0b5cff!important;
-  color:#fff!important;
-}
-.ps-date-grid button{
-  background:#fff!important;
-  border-color:#cbd7e8!important;
-  color:#16345d!important;
-}
-.ps-date-grid button:hover,
-.ps-date-grid button:focus-visible{
-  border-color:#0b5cff!important;
-  box-shadow:0 0 0 3px rgba(11,92,255,.10);
-}
+.ps-country-overlay{background:linear-gradient(transparent,rgba(7,21,46,.82))!important;color:#fff!important}
+.ps-discovery-tabs{background:#edf2f8!important}
+.ps-discovery-tabs button{color:#52627c!important}
+.ps-discovery-tabs button.active{background:#fff!important;color:#0b5cff!important}
+.ps-card-badge{background:#edf4ff!important;color:#0b5cff!important}
+.ps-back,.ps-back-chip{color:#0b5cff!important}
+.ps-primary{background:#0b5cff!important;color:#fff!important}
+.ps-available-dates button{background:#fff!important;color:#24446f!important;border-color:#cbd7e8!important}
+.ps-available-dates button.active{background:#0b5cff!important;color:#fff!important;border-color:#0b5cff!important}
+.ps-date-filter-button{background:#0d1f2f!important;color:#fff!important;border-color:#0d1f2f!important}
+
+/* Calendar */
+.ps-calendar-modal{background:rgba(10,25,50,.42)!important}
+.ps-calendar-dialog,
+.ps-calendar-shell{background:#fff!important;color:#0d1f44!important}
+.ps-calendar-cell{background:#fff!important;color:#0d1f44!important;border-color:#e1e7f0!important}
+.ps-calendar-cell.has-journeys{background:#f5f9ff!important}
+.ps-calendar-cell.selected{background:#0b5cff!important;color:#fff!important}
+.ps-calendar-routes span{background:#e9f1ff!important;color:#24446f!important}
+.ps-calendar-cell.selected .ps-calendar-routes span{background:rgba(255,255,255,.18)!important;color:#fff!important}
+.ps-calendar-mobile button{background:#fff!important;color:#0d1f44!important;border-color:#dce4ef!important}
+.ps-calendar-mobile button.selected{background:#edf4ff!important;border-color:#0b5cff!important}
 
 /* Journey results */
 .ps-journey{
@@ -77,9 +63,9 @@
   grid-template-columns:minmax(360px,44%) 1fr!important;
 }
 .ps-journey.ps-unavailable{display:none!important}
-.ps-route-images{background:#eef3f8}
-.ps-route-images button{min-height:220px!important;background:#eef3f8!important}
-.ps-route-images button img{object-fit:contain!important;background:#eef3f8}
+.ps-route-images{background:#eef3f8;display:grid!important;grid-template-columns:1fr 1fr!important}
+.ps-route-images button{height:220px!important;min-height:220px!important;background:#eef3f8!important;overflow:hidden!important}
+.ps-route-images button img{display:block!important;width:100%!important;height:100%!important;object-fit:cover!important;background:#eef3f8}
 .ps-journey-main{grid-template-columns:minmax(260px,1fr) 96px 150px 130px!important;gap:16px!important}
 .ps-journey h3,
 .ps-price strong{color:#0d1f44!important}
@@ -253,7 +239,7 @@
   .ps-customer-content{width:min(100% - 24px,1120px);padding-top:22px}
   .ps-customer-title h1{font-size:27px}
   .ps-journey{grid-template-columns:1fr!important}
-  .ps-route-images button{min-height:190px!important}
+  .ps-route-images button{height:190px!important;min-height:190px!important}
   .ps-journey-main{grid-template-columns:1fr!important}
   .ps-actions{grid-column:auto}
   .ps-card-seats{width:max-content;grid-template-columns:72px auto}
