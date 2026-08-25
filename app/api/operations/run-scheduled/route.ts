@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { dispatchDueCustomerEmails } from '@/lib/customer-email';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export async function GET(req: NextRequest) {
@@ -12,5 +13,7 @@ export async function GET(req: NextRequest) {
   const supabase = createClient(url, key, { auth: { persistSession: false } });
   const { data, error } = await supabase.rpc('v2_system_run_scheduled_operations', { p_t72_limit: 100, p_t24_limit: 100 });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true, result: data });
+  let emailResult={claimed:0,sent:0,failed:0};
+  try{emailResult=await dispatchDueCustomerEmails(50)}catch(e:any){console.error('Customer email dispatch failed',e?.message||e)}
+  return NextResponse.json({ ok: true, result: data, emails:emailResult });
 }
