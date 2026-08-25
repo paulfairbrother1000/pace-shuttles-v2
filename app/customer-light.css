@@ -74,7 +74,13 @@
   border-color:#dce4ef!important;
   color:#0d1f44!important;
   box-shadow:0 5px 20px rgba(13,31,68,.05);
+  grid-template-columns:minmax(360px,44%) 1fr!important;
 }
+.ps-journey.ps-unavailable{display:none!important}
+.ps-route-images{background:#eef3f8}
+.ps-route-images button{min-height:220px!important;background:#eef3f8!important}
+.ps-route-images button img{object-fit:contain!important;background:#eef3f8}
+.ps-journey-main{grid-template-columns:minmax(260px,1fr) 96px 150px 130px!important;gap:16px!important}
 .ps-journey h3,
 .ps-price strong{color:#0d1f44!important}
 .ps-filters label,
@@ -86,6 +92,10 @@
   color:#0d1f44!important;
   border-color:#cbd7e8!important;
 }
+.ps-card-seats{display:grid;grid-template-columns:1fr auto;gap:5px 8px;align-items:center;color:#52627c;font-size:12px;font-weight:800}
+.ps-card-seats>span:first-child{grid-column:1/-1}
+.ps-card-seats select{min-width:68px;background:#fff;color:#0d1f44;border:1px solid #cbd7e8;border-radius:10px;padding:10px 28px 10px 10px;font-weight:800}
+.ps-card-seats-suffix{font-weight:600;color:#52627c}
 .ps-empty,
 .ps-catalog-empty{
   background:#fff!important;
@@ -226,6 +236,11 @@
 .ps-customer-account .data-note,
 .ps-customer-account small{color:#66738d}
 
+@media(max-width:1050px){
+  .ps-journey{grid-template-columns:minmax(300px,40%) 1fr!important}
+  .ps-journey-main{grid-template-columns:1fr 90px 140px!important}
+  .ps-actions{grid-column:3}
+}
 @media(max-width:800px){
   .ps-public,
   .ps-checkout,
@@ -237,4 +252,9 @@
   .ps-customer-header nav a{font-size:12px;padding:7px 9px}
   .ps-customer-content{width:min(100% - 24px,1120px);padding-top:22px}
   .ps-customer-title h1{font-size:27px}
+  .ps-journey{grid-template-columns:1fr!important}
+  .ps-route-images button{min-height:190px!important}
+  .ps-journey-main{grid-template-columns:1fr!important}
+  .ps-actions{grid-column:auto}
+  .ps-card-seats{width:max-content;grid-template-columns:72px auto}
 }
