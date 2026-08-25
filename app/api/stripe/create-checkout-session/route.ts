@@ -10,7 +10,16 @@ export async function POST(req:Request){
  try{
   const auth=req.headers.get('authorization')||''; const token=auth.replace(/^Bearer\s+/i,''); if(!token)return NextResponse.json({error:'Sign in required'},{status:401});
   const url=process.env.NEXT_PUBLIC_SUPABASE_URL!,anon=process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,service=process.env.SUPABASE_SERVICE_ROLE_KEY!,secret=process.env.STRIPE_SECRET_KEY!;
-  if(!url||!anon||!service||!secret)return NextResponse.json({error:'Payment service is not configured'},{status:503});
+  const missing=[
+   !url&&'NEXT_PUBLIC_SUPABASE_URL',
+   !anon&&'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+   !service&&'SUPABASE_SERVICE_ROLE_KEY',
+   !secret&&'STRIPE_SECRET_KEY'
+  ].filter(Boolean) as string[];
+  if(missing.length){
+   const preview=process.env.VERCEL_ENV==='preview';
+   return NextResponse.json({error:'Payment service is not configured',...(preview?{missing}: {})},{status:503});
+  }
   const userClient=createClient(url,anon,{global:{headers:{Authorization:`Bearer ${token}`}}}); const {data:{user}}=await userClient.auth.getUser(token); if(!user)return NextResponse.json({error:'Sign in required'},{status:401});
   const {orderId}=await req.json(); const {data,error}=await userClient.rpc('v2_customer_order_payment_context',{p_order_id:orderId}); if(error||!data?.[0])return NextResponse.json({error:error?.message||'Order not found'},{status:404}); const o=data[0];
   if(o.payment_status==='paid')return NextResponse.json({paid:true,url:`/payment/success?order=${o.order_id}`});
