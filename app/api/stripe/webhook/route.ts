@@ -1,5 +1,6 @@
 import {NextResponse} from 'next/server';
 import {createClient} from '@supabase/supabase-js';
+import {dispatchDueCustomerEmails} from '@/lib/customer-email';
 import crypto from 'crypto';
 export const runtime='nodejs';
 
@@ -61,6 +62,13 @@ export async function POST(req:Request){
         const refund=await stripeRefund(pi);
         const {error:recordError}=await s.rpc('v2_system_record_automatic_refund',{p_refund_request_id:rr.refund_request_id,p_provider_refund_ref:refund.id});
         if(recordError)throw recordError;
+      }
+
+      try{
+        const emailResult=await dispatchDueCustomerEmails(25);
+        if(emailResult.failed)console.error('One or more customer emails failed after payment',emailResult);
+      }catch(emailError:any){
+        console.error('Immediate customer email dispatch failed; scheduled retry remains available',emailError?.message||emailError);
       }
     }else if(orderId&&(event.type==='checkout.session.async_payment_failed'||event.type==='payment_intent.payment_failed')){
       const {error:failedError}=await s.rpc('v2_system_mark_stripe_failed',{
