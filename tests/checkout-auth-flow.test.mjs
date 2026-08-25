@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {checkoutResumePath,checkoutAuthCopy} from '../lib/checkout-auth-flow.ts';
+import {checkoutResumePath,checkoutAuthCopy} from '../lib/checkout-auth-flow.js';
 
 test('checkout resume path keeps the same quote id',()=>{
   assert.equal(checkoutResumePath('quote 123'),'/checkout?q=quote%20123&resume=1');
