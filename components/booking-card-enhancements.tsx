@@ -7,12 +7,16 @@ const seatOptions = Array.from({length:12},(_,i)=>i+1);
 const money=(c:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format((c||0)/100);
 
 function departureIdFor(card:HTMLElement){
-  const fiberKey=Object.keys(card).find(key=>key.startsWith('__reactFiber$'));
+  const ownProps=Object.getOwnPropertyNames(card);
+  const fiberKey=ownProps.find(key=>key.startsWith('__reactFiber$'));
   let fiber=fiberKey?(card as any)[fiberKey]:null;
-  for(let i=0;fiber&&i<4;i++,fiber=fiber.return){
+  for(let i=0;fiber&&i<24;i++,fiber=fiber.return){
     if(typeof fiber.key==='string'&&fiber.key)return fiber.key;
+    const props=fiber.memoizedProps||fiber.pendingProps;
+    const explicit=props?.['data-departure-id'];
+    if(typeof explicit==='string'&&explicit)return explicit;
   }
-  return '';
+  return card.dataset.departureId||'';
 }
 
 export default function BookingCardEnhancements(){
@@ -20,7 +24,26 @@ export default function BookingCardEnhancements(){
     const supabase=getSupabaseBrowserClient();
     if(!supabase)return;
 
+    let forcedDefault=false;
+
     const enhance=()=>{
+      // The old page-level Seats selector is no longer the booking control. Keep
+      // the underlying search at one seat and hide the global selector so each
+      // journey record owns its own independent party size.
+      const topSelect=document.querySelector<HTMLSelectElement>('.ps-planner-head label select');
+      if(topSelect){
+        const topLabel=topSelect.closest('label') as HTMLElement|null;
+        if(topLabel)topLabel.style.display='none';
+        if(!forcedDefault){
+          forcedDefault=true;
+          if(topSelect.value!=='1'){
+            topSelect.value='1';
+            topSelect.dispatchEvent(new Event('change',{bubbles:true}));
+            return;
+          }
+        }
+      }
+
       document.querySelectorAll<HTMLElement>('.ps-journey').forEach(card=>{
         if(card.classList.contains('ps-unavailable'))return;
         const main=card.querySelector<HTMLElement>('.ps-journey-main');
@@ -50,6 +73,7 @@ export default function BookingCardEnhancements(){
           const label=price.querySelector('span');
           const strong=price.querySelector('strong');
           const small=price.querySelector('small');
+          card.classList.remove('ps-unavailable');
           if(label)label.textContent='Per seat incl. tax & fees';
           if(strong){strong.textContent=money(q.all_in_unit_price_cents);strong.classList.remove('ps-price-loading')}
           if(small)small.textContent=`${partySize} seat${partySize===1?'':'s'} · ${money(q.all_in_total_cents)} total`;
@@ -68,6 +92,9 @@ export default function BookingCardEnhancements(){
           const q=(data as any)?.[0];
           if(error||!q||q.quote_status!=='offer'){
             card.classList.add('ps-unavailable');
+            if(strong){strong.textContent='Unavailable';strong.classList.remove('ps-price-loading')}
+            if(small)small.textContent='Your selected party size cannot be accommodated together on this departure.';
+            action.disabled=true;action.textContent='Unavailable';
             return;
           }
           renderQuote(q,partySize);
