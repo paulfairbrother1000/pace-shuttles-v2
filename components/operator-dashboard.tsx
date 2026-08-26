@@ -8,6 +8,8 @@ import {
 } from '@/lib/data';
 import {KpiCard,Section,Status} from './ui';
 import {vehicleCapacity} from '@/lib/vehicle-capacity';
+import {operatorIdentity,operatorIdentityError,OperatorMembershipIdentity} from '@/lib/operator-identity';
+import {getSupabaseBrowserClient} from '@/lib/supabase';
 
 const money=(c:any)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(c||0)/100);
 const when=(x:any)=>x?new Date(x).toLocaleString([],{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
@@ -44,6 +46,7 @@ export function OperatorDashboard(){
  const tabs=[['overview','Overview'],['consideration','Under consideration'],['confirmed','Confirmed'],['completed','Completed'],['fleet','Fleet & availability'],['offers','Route offers'],['quality','Quality & fairness']];
 
  return <>
+   <OperatorIdentityBanner/>
    <div className="grid-4">
      <KpiCard label="Under consideration" value={String(under.length)}/>
      <KpiCard label="Confirmed / active" value={String(confirmed.length)}/>
@@ -68,6 +71,36 @@ export function OperatorDashboard(){
    {(journeys.error||considerations.error||fleet.error||offers.error)&&
      <p className="action-error">{journeys.error||considerations.error||fleet.error||offers.error}</p>}
  </>;
+}
+
+function OperatorIdentityBanner(){
+ const [identity,setIdentity]=useState(()=>operatorIdentity({}));
+ const [error,setError]=useState(''),[retry,setRetry]=useState(0);
+ useEffect(()=>{
+   const supabase=getSupabaseBrowserClient();
+   if(!supabase){setError('Supabase is not configured.');return;}
+   setError('');
+   void Promise.all([supabase.auth.getUser(),supabase.rpc('v2_current_access_context')]).then(([userResult,accessResult])=>{
+     const requestError=operatorIdentityError({accountError:userResult.error,accessError:accessResult.error});
+     if(requestError){setError(requestError);return;}
+     const access=Array.isArray(accessResult.data)?accessResult.data[0]:accessResult.data;
+     setIdentity(operatorIdentity({
+       accountEmail:userResult.data.user?.email,
+       operatorMemberships:(access?.operator_memberships||[]) as OperatorMembershipIdentity[],
+     }));
+   }).catch(requestError=>setError(requestError instanceof Error?requestError.message:'Operator identity is unavailable.'));
+ },[retry]);
+ return <section className="operator-identity" aria-label="Signed-in operator identity">
+   <div>
+     <small>Operating as</small>
+     {error
+       ? <strong>Operator identity unavailable</strong>
+       : identity.memberships.length
+       ? identity.memberships.map((membership,index)=><strong key={`${membership.operatorName}-${membership.roleLabel}-${index}`}>{membership.operatorName} · {membership.roleLabel}</strong>)
+       : <strong>Loading operator access…</strong>}
+   </div>
+   <div><small>Signed-in account</small>{error?<button className="link-button" onClick={()=>setRetry(value=>value+1)}>Retry</button>:<span>{identity.accountEmail||'Loading account…'}</span>}</div>
+ </section>;
 }
 
 function Overview({under,confirmed,q,fair}:{under:any[],confirmed:any[],q:any,fair:any}){
