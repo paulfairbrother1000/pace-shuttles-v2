@@ -21,8 +21,11 @@ describe('OperatorVehicleEditor',()=>{
   expect(screen.getByText('Jolly Harbour → Nobu')).toBeTruthy();
   expect((screen.getByLabelText('Default / preferred captain') as HTMLSelectElement).value).toBe('c1');
   expect(screen.getByText('Default captain: James Williams')).toBeTruthy();
-  expect((screen.getByLabelText('Preferred captain for Jolly Harbour → Nobu') as HTMLSelectElement).value).toBe('c2');
-  expect(screen.getByRole('option',{name:'Use boat default — James Williams'})).toBeTruthy();
+  const routeCaptain = screen.getByLabelText('Preferred captain for Jolly Harbour → Nobu') as HTMLSelectElement;
+  expect(routeCaptain.value).toBe('c2');
+  expect(routeCaptain.closest('label')?.className).toContain('route-captain-field');
+  expect(screen.getByRole('option',{name:'Boat default — James Williams'})).toBeTruthy();
+  expect(screen.getByText('Route override — Michelle Thomas')).toBeTruthy();
  });
 
  it('creates a blank form and offers only unattached matching routes',async()=>{
