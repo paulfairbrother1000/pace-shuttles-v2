@@ -52,7 +52,10 @@ export const adminRegisterOperatorCancellation=(allocationId:string,replacementC
 export const adminCreateVehicle=(a:any)=>rpc('v2_admin_create_vehicle',a);
 export const adminCreateCaptain=(a:any)=>rpc('v2_admin_create_captain',a);
 export const adminSetCaptainVehicleType=(captainId:string,vehicleTypeId:string,active=true)=>rpc('v2_admin_set_captain_vehicle_type',{p_captain_id:captainId,p_vehicle_type_id:vehicleTypeId,p_active:active});
-export const adminCreateRouteOffer=(a:any)=>rpc('v2_admin_create_route_offer',a);
+export const adminCreateRouteOffer=(a:{
+ p_vehicle_id:string;p_service_id:string;p_min_seats:number;p_max_seats:number;p_min_revenue_cents:number;
+ p_preferred:boolean;p_min_value_threshold_ratio:number|null;p_post_min_discount_enabled:boolean;p_post_min_discount_bps:number;
+})=>rpc('v2_admin_create_route_offer',a);
 export const adminSetRouteOfferActive=(offerId:string,active:boolean)=>rpc('v2_admin_set_route_offer_active',{p_offer_id:offerId,p_active:active});
 export const adminAddVehicleUnavailability=(a:any)=>rpc('v2_admin_add_vehicle_unavailability',a);
 

@@ -1,7 +1,7 @@
 'use client';
 import React,{useEffect,useMemo,useState} from 'react';
 import {
- blankVehicleDraft,newRouteOffer,toVehicleSavePayload,validateVehicleDraft,vehicleToDraft,
+ blankVehicleDraft,formatServiceSchedule,newRouteOffer,toVehicleSavePayload,validateVehicleDraft,vehicleToDraft,
  CaptainOption,RouteOfferDraft,RouteOfferRow,RouteOption,VehicleEditorDraft,VehicleEditorRow,VehicleTypeOption
 } from '@/lib/operator-vehicle-editor';
 
@@ -16,14 +16,14 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
  const [selectedId,setSelectedId]=useState<string|null>(vehicles[0]?.vehicle_id||null);
  const [draft,setDraft]=useState<VehicleEditorDraft>(()=>vehicles[0]?vehicleToDraft(vehicles[0],offers):blankVehicleDraft());
  const [errors,setErrors]=useState<Record<string,string>>({});
- const [routeId,setRouteId]=useState('');
+ const [serviceId,setServiceId]=useState('');
 
  useEffect(()=>{
   if(selectedId){const vehicle=vehicles.find(v=>v.vehicle_id===selectedId);if(vehicle)setDraft(vehicleToDraft(vehicle,offers));}
  },[vehicles,offers,selectedId]);
 
- const selectVehicle=(id:string)=>{const vehicle=vehicles.find(v=>v.vehicle_id===id);if(!vehicle)return;setSelectedId(id);setDraft(vehicleToDraft(vehicle,offers));setErrors({});setRouteId('');};
- const addVehicle=()=>{const next=blankVehicleDraft();next.operatorId=vehicleTypes[0]?.operator_id||null;setSelectedId(null);setDraft(next);setErrors({});setRouteId('');};
+ const selectVehicle=(id:string)=>{const vehicle=vehicles.find(v=>v.vehicle_id===id);if(!vehicle)return;setSelectedId(id);setDraft(vehicleToDraft(vehicle,offers));setErrors({});setServiceId('');};
+ const addVehicle=()=>{const next=blankVehicleDraft();next.operatorId=vehicleTypes[0]?.operator_id||null;setSelectedId(null);setDraft(next);setErrors({});setServiceId('');};
  const update=<K extends keyof VehicleEditorDraft,>(name:K,value:VehicleEditorDraft[K])=>setDraft(current=>({...current,[name]:value}));
  const updateOffer=(index:number,patch:Partial<RouteOfferDraft>)=>setDraft(current=>({...current,routeOffers:current.routeOffers.map((offer,i)=>i===index?{...offer,...patch}:offer)}));
  const selectedVehicle=vehicles.find(v=>v.vehicle_id===selectedId);
@@ -31,9 +31,10 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
  const typeOptions=useMemo(()=>{
   const seen=new Set<string>();return vehicleTypes.filter(t=>(!draft.operatorId||t.operator_id===draft.operatorId)&&!seen.has(t.vehicle_type_id)&&!!seen.add(t.vehicle_type_id));
  },[vehicleTypes,draft.operatorId]);
- const attached=new Set(draft.routeOffers.filter(o=>!o.remove).map(o=>o.routeId));
- const routeOptions=routes.filter(r=>r.operator_id===draft.operatorId&&r.vehicle_type_id===draft.vehicleTypeId&&!attached.has(r.route_id));
- const addRoute=()=>{const route=routeOptions.find(r=>r.route_id===routeId);if(!route)return;setDraft(current=>({...current,routeOffers:[...current.routeOffers,newRouteOffer(route,current.capacitySeats)]}));setRouteId('');};
+ const attached=new Set(draft.routeOffers.filter(o=>!o.remove).map(o=>o.serviceId));
+ const routeOptions=routes.filter(r=>r.operator_id===draft.operatorId&&r.vehicle_type_id===draft.vehicleTypeId&&!attached.has(r.service_id));
+ const serviceLabel=(route:RouteOption)=>`${route.route_name} — ${formatServiceSchedule(route.days_of_week,route.departure_time)}`;
+ const addRoute=()=>{const route=routeOptions.find(r=>r.service_id===serviceId);if(!route)return;setDraft(current=>({...current,routeOffers:[...current.routeOffers,newRouteOffer(route,current.capacitySeats)]}));setServiceId('');};
  const cancel=()=>selectedVehicle?selectVehicle(selectedVehicle.vehicle_id):addVehicle();
  const save=async()=>{const nextErrors=validateVehicleDraft(draft);setErrors(nextErrors);if(Object.keys(nextErrors).length)return;const ok=await onSave(toVehicleSavePayload(draft));if(ok)setErrors({});};
 
@@ -57,8 +58,8 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
    </div></div>
 
    <div className="editor-panel route-offers-panel"><div className="route-panel-head"><div><h3>Routes &amp; pricing</h3><p>Add this vehicle to eligible routes and set the commercial terms for each complete two-leg journey.</p></div></div>
-    <div className="add-route-row"><label><span>Add route</span><select aria-label="Eligible route" value={routeId} onChange={e=>setRouteId(e.target.value)} disabled={!draft.vehicleTypeId}><option value="">{draft.vehicleTypeId?'Select an eligible route':'Select Transport Type first'}</option>{routeOptions.map(route=><option key={route.route_id} value={route.route_id}>{route.route_name}</option>)}</select></label><button className="btn secondary" disabled={!routeId} onClick={addRoute}>+ Add route</button></div>
-    <div className="offer-list">{draft.routeOffers.map((offer,index)=><RouteOfferCard key={offer.key} offer={offer} index={index} errors={errors} captains={captainOptions} defaultCaptainName={captainOptions.find(c=>c.captain_id===draft.preferredCaptainId)?.captain_name||''} update={patch=>updateOffer(index,patch)}/>)}</div>
+    <div className="add-route-row"><label><span>Add route</span><select aria-label="Eligible route" value={serviceId} onChange={e=>setServiceId(e.target.value)} disabled={!draft.vehicleTypeId}><option value="">{draft.vehicleTypeId?'Select an eligible route':'Select Transport Type first'}</option>{routeOptions.map(route=><option key={route.service_id} value={route.service_id}>{serviceLabel(route)}</option>)}</select></label><button className="btn secondary" disabled={!serviceId} onClick={addRoute}>+ Add route</button></div>
+    <div className="offer-list">{draft.routeOffers.map((offer,index)=>{const route=routes.find(option=>option.service_id===offer.serviceId);const heading=route?serviceLabel(route):offer.routeName;return <RouteOfferCard key={offer.key} offer={offer} heading={heading} index={index} errors={errors} captains={captainOptions} defaultCaptainName={captainOptions.find(c=>c.captain_id===draft.preferredCaptainId)?.captain_name||''} update={patch=>updateOffer(index,patch)}/>;})}</div>
     {!draft.routeOffers.some(o=>!o.remove)&&<div className="empty-state">This vehicle is not attached to any routes yet.</div>}
    </div>
 
@@ -67,11 +68,11 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
  </section>;
 }
 
-function RouteOfferCard({offer,index,errors,captains,defaultCaptainName,update}:{offer:RouteOfferDraft;index:number;errors:Record<string,string>;captains:CaptainOption[];defaultCaptainName:string;update:(patch:Partial<RouteOfferDraft>)=>void}){
+function RouteOfferCard({offer,heading,index,errors,captains,defaultCaptainName,update}:{offer:RouteOfferDraft;heading:string;index:number;errors:Record<string,string>;captains:CaptainOption[];defaultCaptainName:string;update:(patch:Partial<RouteOfferDraft>)=>void}){
  const prefix=`routeOffers.${index}`;
  const overrideCaptainName=captains.find(c=>c.captain_id===offer.preferredCaptainId)?.captain_name;
- if(offer.remove)return <article className="offer-card removed"><div><b>{offer.routeName}</b><small>Will be removed when you save.</small></div><button className="btn secondary" onClick={()=>update({remove:false})}>Undo</button></article>;
- return <article className="offer-card"><header><div><h4>{offer.routeName}</h4><small>Active Route Offer</small></div><button className="remove-route" onClick={()=>update({remove:true})}>Remove</button></header>
+ if(offer.remove)return <article className="offer-card removed"><div><b>{heading}</b><small>Will be removed when you save.</small></div><button className="btn secondary" onClick={()=>update({remove:false})}>Undo</button></article>;
+ return <article className="offer-card"><header><div><h4>{heading}</h4><small>Active Route Offer</small></div><button className="remove-route" onClick={()=>update({remove:true})}>Remove</button></header>
   <div className="offer-grid">
    <label className="route-captain-field"><span>Preferred captain</span><select aria-label={`Preferred captain for ${offer.routeName}`} value={offer.preferredCaptainId} onChange={e=>update({preferredCaptainId:e.target.value})}><option value="">{defaultCaptainName?`Boat default — ${defaultCaptainName}`:'No boat default set'}</option>{captains.map(c=><option key={c.captain_id} value={c.captain_id}>{c.captain_name}</option>)}</select><small className="captain-source">{overrideCaptainName?`Route override — ${overrideCaptainName}`:defaultCaptainName?`Boat default — ${defaultCaptainName}`:'No captain preference set'}</small></label>
    <label><span>Minimum seats</span><input type="number" min="1" step="1" value={offer.minSeats} onChange={e=>update({minSeats:e.target.value})}/>{fieldError(errors,`${prefix}.minSeats`)}</label>

@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { ReactNode } from 'react';
+import React, { ReactNode } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { LayoutDashboard, Activity, BookOpen, Users, MapPinned, BarChart3, WalletCards, Headphones, Settings, Menu, ChevronRight, ShipWheel, CircleDollarSign, CarFront, UserRound, Route, Bell, MoreHorizontal } from 'lucide-react';
 

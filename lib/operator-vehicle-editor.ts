@@ -7,7 +7,7 @@ export type VehicleEditorRow={
 };
 
 export type RouteOfferRow={
- offer_id:string; operator_id:string; vehicle_id:string; route_id:string; route_name:string; preferred?:boolean;
+ offer_id:string; operator_id:string; vehicle_id:string; route_id:string; route_name:string; service_id:string; preferred?:boolean;
  active:boolean; min_seats:number; max_seats:number; min_revenue_cents:number;
  min_value_threshold_ratio?:number|null; below_minimum_operation_mode?:BelowMinimumMode|null;
  post_min_discount_enabled:boolean; post_min_discount_bps:number;
@@ -15,7 +15,7 @@ export type RouteOfferRow={
 };
 
 export type CaptainOption={operator_id:string;captain_id:string;captain_name:string;vehicle_type_id:string};
-export type RouteOption={operator_id:string;route_id:string;route_name:string;vehicle_type_id:string;country_id:string;locality_id?:string|null};
+export type RouteOption={operator_id:string;route_id:string;route_name:string;service_id:string;days_of_week:number[];departure_time:string;timezone:string;vehicle_type_id:string;country_id:string;locality_id?:string|null};
 export type VehicleTypeOption={operator_id:string;vehicle_type_id:string;vehicle_type_name:string};
 
 export function scopeVehicleEditorData<T extends Record<string,{operator_id:string}[]>>(operatorId:string,data:T):T{
@@ -23,7 +23,7 @@ export function scopeVehicleEditorData<T extends Record<string,{operator_id:stri
 }
 
 export type RouteOfferDraft={
- key:string; offerId:string|null; routeId:string; routeName:string; preferred:boolean; active:boolean;
+ key:string; offerId:string|null; routeId:string; routeName:string; serviceId:string; preferred:boolean; active:boolean;
  minSeats:string; maxSeats:string; minRevenueUsd:string; discountEnabled:boolean; discountPercent:string;
  belowMinimumMode:BelowMinimumMode; thresholdPercent:string; preferredCaptainId:string; remove:boolean;
 };
@@ -37,6 +37,11 @@ export type VehicleEditorDraft={
 
 const key=()=>`draft-${Math.random().toString(36).slice(2)}`;
 const numberText=(value:number)=>Number.isFinite(value)?String(value):'';
+const weekdayNames:{[day:number]:string}={0:'Sunday',1:'Monday',2:'Tuesday',3:'Wednesday',4:'Thursday',5:'Friday',6:'Saturday',7:'Sunday'};
+
+export function formatServiceSchedule(daysOfWeek:number[],departureTime:string):string{
+ return `${daysOfWeek.map(day=>weekdayNames[day]).filter(Boolean).join(', ')} at ${departureTime.slice(0,5)}`;
+}
 
 export function blankVehicleDraft():VehicleEditorDraft{
  return {vehicleId:null,operatorId:null,vehicleTypeId:'',name:'',description:'',pictureUrl:'',capacitySeats:'',active:true,preferredCaptainId:'',expectedUpdatedAt:null,routeOffers:[]};
@@ -44,7 +49,7 @@ export function blankVehicleDraft():VehicleEditorDraft{
 
 export function offerToDraft(offer:RouteOfferRow):RouteOfferDraft{
  const mode=offer.below_minimum_operation_mode||(offer.min_value_threshold_ratio==null?'route_default':'custom_threshold');
- return {key:offer.offer_id,offerId:offer.offer_id,routeId:offer.route_id,routeName:offer.route_name,preferred:!!offer.preferred,
+ return {key:offer.offer_id,offerId:offer.offer_id,routeId:offer.route_id,routeName:offer.route_name,serviceId:offer.service_id,preferred:!!offer.preferred,
   active:offer.active!==false,minSeats:numberText(Number(offer.min_seats)),maxSeats:numberText(Number(offer.max_seats)),
   minRevenueUsd:numberText(Number(offer.min_revenue_cents||0)/100),discountEnabled:!!offer.post_min_discount_enabled,
   discountPercent:numberText(Number(offer.post_min_discount_bps||0)/100),belowMinimumMode:mode,
@@ -61,7 +66,7 @@ export function vehicleToDraft(vehicle:VehicleEditorRow,offers:RouteOfferRow[]):
 }
 
 export function newRouteOffer(route:RouteOption,capacitySeats:string):RouteOfferDraft{
- return {key:key(),offerId:null,routeId:route.route_id,routeName:route.route_name,preferred:false,active:true,minSeats:'',
+ return {key:key(),offerId:null,routeId:route.route_id,routeName:route.route_name,serviceId:route.service_id,preferred:false,active:true,minSeats:'',
   maxSeats:capacitySeats,minRevenueUsd:'',discountEnabled:false,discountPercent:'0',belowMinimumMode:'never',thresholdPercent:'',preferredCaptainId:'',remove:false};
 }
 
@@ -71,12 +76,12 @@ export function validateVehicleDraft(draft:VehicleEditorDraft):Record<string,str
  if(!draft.name.trim())errors.name='Enter a vehicle name.';
  if(!draft.vehicleTypeId)errors.vehicleTypeId='Select a Transport Type.';
  if(!Number.isInteger(capacity)||capacity<1)errors.capacitySeats='Passenger capacity must be a whole number of at least 1.';
- const routes=new Set<string>();
+ const services=new Set<string>();
  draft.routeOffers.filter(x=>!x.remove).forEach((offer,index)=>{
   const prefix=`routeOffers.${index}`;
   const min=Number(offer.minSeats),max=Number(offer.maxSeats),revenue=Number(offer.minRevenueUsd),discount=Number(offer.discountPercent),threshold=Number(offer.thresholdPercent);
-  if(!offer.routeId)errors[`${prefix}.routeId`]='Select a route.';
-  if(routes.has(offer.routeId))errors[`${prefix}.routeId`]='This route is already attached.'; else routes.add(offer.routeId);
+  if(!offer.serviceId)errors[`${prefix}.serviceId`]='Select a service.';
+  if(services.has(offer.serviceId))errors[`${prefix}.serviceId`]='This service is already attached.'; else services.add(offer.serviceId);
   if(!Number.isInteger(min)||min<1)errors[`${prefix}.minSeats`]='Minimum seats must be at least 1.';
   if(!Number.isInteger(max)||max<min)errors[`${prefix}.maxSeats`]='Maximum seats must be at least the minimum.';
   else if(Number.isFinite(capacity)&&max>capacity)errors[`${prefix}.maxSeats`]=`Maximum seats cannot exceed vehicle capacity (${capacity}).`;
@@ -91,7 +96,7 @@ export function toVehicleSavePayload(draft:VehicleEditorDraft):Record<string,unk
  return {vehicle_id:draft.vehicleId,operator_id:draft.operatorId,expected_updated_at:draft.expectedUpdatedAt,vehicle_type_id:draft.vehicleTypeId,name:draft.name.trim(),description:draft.description.trim()||null,
   picture_url:draft.pictureUrl.trim()||null,capacity_seats:Number(draft.capacitySeats),active:draft.active,
   preferred_captain_id:draft.preferredCaptainId||null,route_offers:draft.routeOffers.map(offer=>({
-   offer_id:offer.offerId,route_id:offer.routeId,preferred:offer.preferred,active:offer.active,remove:offer.remove,preferred_captain_id:offer.preferredCaptainId||null,
+   offer_id:offer.offerId,service_id:offer.serviceId,route_id:offer.routeId,preferred:offer.preferred,active:offer.active,remove:offer.remove,preferred_captain_id:offer.preferredCaptainId||null,
    min_seats:Number(offer.minSeats),max_seats:Number(offer.maxSeats),min_revenue_cents:Math.round(Number(offer.minRevenueUsd)*100),
    post_min_discount_enabled:offer.discountEnabled,post_min_discount_bps:offer.discountEnabled?Math.round(Number(offer.discountPercent||0)*100):0,
    below_minimum_operation_mode:offer.belowMinimumMode,
