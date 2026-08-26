@@ -9,6 +9,7 @@ import {
   adminSetRouteOfferActive,adminUpdateOperator,adminSetOperatorCommissionOverride,adminEndOperatorCommissionOverride
 } from '@/lib/data';
 import {KpiCard,Section,Status} from './ui';
+import {vehicleCapacity} from '@/lib/vehicle-capacity';
 
 const money=(c:any)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(c||0)/100);
 const date=(x:any)=>x?new Date(x).toLocaleString():'—';
@@ -18,8 +19,6 @@ function useLoad(fn:any){
   useEffect(()=>{void fn().then((r:any)=>{setRows(r.data||[]);setError(r.error?.message||'')})},[]);
   return {rows,error};
 }
-
-function vehicleCapacity(v:any){return Number(v.capacity??v.max_seats??v.default_max_seats??0)}
 
 export function OperatorDetailRouteOffers({id}:{id:string}){
   const {rows:operators,error:operatorError}=useLoad(loadOperators);
