@@ -3,7 +3,7 @@ export type BelowMinimumMode='never'|'route_default'|'custom_threshold';
 export type VehicleEditorRow={
  vehicle_id:string; operator_id:string; vehicle_type_id:string; vehicle_type_name?:string;
  name:string; description?:string|null; picture_url?:string|null; capacity_seats:number;
- active:boolean; preferred_captain_id?:string|null; updated_at?:string;
+ active:boolean; preferred_captain_id?:string|null; preferred_captain_name?:string|null; updated_at?:string;
 };
 
 export type RouteOfferRow={
@@ -11,6 +11,7 @@ export type RouteOfferRow={
  active:boolean; min_seats:number; max_seats:number; min_revenue_cents:number;
  min_value_threshold_ratio?:number|null; below_minimum_operation_mode?:BelowMinimumMode|null;
  post_min_discount_enabled:boolean; post_min_discount_bps:number;
+ preferred_captain_id?:string|null; preferred_captain_name?:string|null;
 };
 
 export type CaptainOption={operator_id:string;captain_id:string;captain_name:string;vehicle_type_id:string};
@@ -24,7 +25,7 @@ export function scopeVehicleEditorData<T extends Record<string,{operator_id:stri
 export type RouteOfferDraft={
  key:string; offerId:string|null; routeId:string; routeName:string; preferred:boolean; active:boolean;
  minSeats:string; maxSeats:string; minRevenueUsd:string; discountEnabled:boolean; discountPercent:string;
- belowMinimumMode:BelowMinimumMode; thresholdPercent:string; remove:boolean;
+ belowMinimumMode:BelowMinimumMode; thresholdPercent:string; preferredCaptainId:string; remove:boolean;
 };
 
 export type VehicleEditorDraft={
@@ -47,7 +48,8 @@ export function offerToDraft(offer:RouteOfferRow):RouteOfferDraft{
   active:offer.active!==false,minSeats:numberText(Number(offer.min_seats)),maxSeats:numberText(Number(offer.max_seats)),
   minRevenueUsd:numberText(Number(offer.min_revenue_cents||0)/100),discountEnabled:!!offer.post_min_discount_enabled,
   discountPercent:numberText(Number(offer.post_min_discount_bps||0)/100),belowMinimumMode:mode,
-  thresholdPercent:mode==='custom_threshold'?numberText(Number(offer.min_value_threshold_ratio||0)*100):'',remove:false};
+  thresholdPercent:mode==='custom_threshold'?numberText(Number(offer.min_value_threshold_ratio||0)*100):'',
+  preferredCaptainId:offer.preferred_captain_id||'',remove:false};
 }
 
 export function vehicleToDraft(vehicle:VehicleEditorRow,offers:RouteOfferRow[]):VehicleEditorDraft{
@@ -60,7 +62,7 @@ export function vehicleToDraft(vehicle:VehicleEditorRow,offers:RouteOfferRow[]):
 
 export function newRouteOffer(route:RouteOption,capacitySeats:string):RouteOfferDraft{
  return {key:key(),offerId:null,routeId:route.route_id,routeName:route.route_name,preferred:false,active:true,minSeats:'',
-  maxSeats:capacitySeats,minRevenueUsd:'',discountEnabled:false,discountPercent:'0',belowMinimumMode:'never',thresholdPercent:'',remove:false};
+  maxSeats:capacitySeats,minRevenueUsd:'',discountEnabled:false,discountPercent:'0',belowMinimumMode:'never',thresholdPercent:'',preferredCaptainId:'',remove:false};
 }
 
 export function validateVehicleDraft(draft:VehicleEditorDraft):Record<string,string>{
@@ -89,7 +91,7 @@ export function toVehicleSavePayload(draft:VehicleEditorDraft):Record<string,unk
  return {vehicle_id:draft.vehicleId,operator_id:draft.operatorId,expected_updated_at:draft.expectedUpdatedAt,vehicle_type_id:draft.vehicleTypeId,name:draft.name.trim(),description:draft.description.trim()||null,
   picture_url:draft.pictureUrl.trim()||null,capacity_seats:Number(draft.capacitySeats),active:draft.active,
   preferred_captain_id:draft.preferredCaptainId||null,route_offers:draft.routeOffers.map(offer=>({
-   offer_id:offer.offerId,route_id:offer.routeId,preferred:offer.preferred,active:offer.active,remove:offer.remove,
+   offer_id:offer.offerId,route_id:offer.routeId,preferred:offer.preferred,active:offer.active,remove:offer.remove,preferred_captain_id:offer.preferredCaptainId||null,
    min_seats:Number(offer.minSeats),max_seats:Number(offer.maxSeats),min_revenue_cents:Math.round(Number(offer.minRevenueUsd)*100),
    post_min_discount_enabled:offer.discountEnabled,post_min_discount_bps:offer.discountEnabled?Math.round(Number(offer.discountPercent||0)*100):0,
    below_minimum_operation_mode:offer.belowMinimumMode,

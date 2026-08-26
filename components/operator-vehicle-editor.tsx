@@ -41,7 +41,7 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
   <aside className="fleet-rail">
    <div className="fleet-rail-head"><div><small>Your fleet</small><strong>{vehicles.length} vehicles</strong></div><button className="btn" onClick={addVehicle}>+ Add vehicle</button></div>
    <div className="fleet-list">{vehicles.map(vehicle=><button key={vehicle.vehicle_id} className={`fleet-item ${selectedId===vehicle.vehicle_id?'selected':''}`} onClick={()=>selectVehicle(vehicle.vehicle_id)}>
-    <span><b>{vehicle.name}</b><small>{vehicle.vehicle_type_name} · {vehicle.capacity_seats} seats</small></span><em>{vehicle.active?'Active':'Inactive'}</em>
+    <span><b>{vehicle.name}</b><small>{vehicle.vehicle_type_name} · {vehicle.capacity_seats} seats</small><small>Default captain: {vehicle.preferred_captain_name||'Not set'}</small></span><em>{vehicle.active?'Active':'Inactive'}</em>
    </button>)}{!vehicles.length&&<div className="empty-state">No vehicles yet. Add your first vehicle.</div>}</div>
   </aside>
 
@@ -58,7 +58,7 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
 
    <div className="editor-panel route-offers-panel"><div className="route-panel-head"><div><h3>Routes &amp; pricing</h3><p>Add this vehicle to eligible routes and set the commercial terms for each complete two-leg journey.</p></div></div>
     <div className="add-route-row"><label><span>Add route</span><select aria-label="Eligible route" value={routeId} onChange={e=>setRouteId(e.target.value)} disabled={!draft.vehicleTypeId}><option value="">{draft.vehicleTypeId?'Select an eligible route':'Select Transport Type first'}</option>{routeOptions.map(route=><option key={route.route_id} value={route.route_id}>{route.route_name}</option>)}</select></label><button className="btn secondary" disabled={!routeId} onClick={addRoute}>+ Add route</button></div>
-    <div className="offer-list">{draft.routeOffers.map((offer,index)=><RouteOfferCard key={offer.key} offer={offer} index={index} errors={errors} update={patch=>updateOffer(index,patch)}/>)}</div>
+    <div className="offer-list">{draft.routeOffers.map((offer,index)=><RouteOfferCard key={offer.key} offer={offer} index={index} errors={errors} captains={captainOptions} defaultCaptainName={captainOptions.find(c=>c.captain_id===draft.preferredCaptainId)?.captain_name||''} update={patch=>updateOffer(index,patch)}/>)}</div>
     {!draft.routeOffers.some(o=>!o.remove)&&<div className="empty-state">This vehicle is not attached to any routes yet.</div>}
    </div>
 
@@ -67,11 +67,12 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
  </section>;
 }
 
-function RouteOfferCard({offer,index,errors,update}:{offer:RouteOfferDraft;index:number;errors:Record<string,string>;update:(patch:Partial<RouteOfferDraft>)=>void}){
+function RouteOfferCard({offer,index,errors,captains,defaultCaptainName,update}:{offer:RouteOfferDraft;index:number;errors:Record<string,string>;captains:CaptainOption[];defaultCaptainName:string;update:(patch:Partial<RouteOfferDraft>)=>void}){
  const prefix=`routeOffers.${index}`;
  if(offer.remove)return <article className="offer-card removed"><div><b>{offer.routeName}</b><small>Will be removed when you save.</small></div><button className="btn secondary" onClick={()=>update({remove:false})}>Undo</button></article>;
  return <article className="offer-card"><header><div><h4>{offer.routeName}</h4><small>Active Route Offer</small></div><button className="remove-route" onClick={()=>update({remove:true})}>Remove</button></header>
   <div className="offer-grid">
+   <label><span>Preferred captain</span><select aria-label={`Preferred captain for ${offer.routeName}`} value={offer.preferredCaptainId} onChange={e=>update({preferredCaptainId:e.target.value})}><option value="">{defaultCaptainName?`Use boat default — ${defaultCaptainName}`:'Use boat default'}</option>{captains.map(c=><option key={c.captain_id} value={c.captain_id}>{c.captain_name}</option>)}</select></label>
    <label><span>Minimum seats</span><input type="number" min="1" step="1" value={offer.minSeats} onChange={e=>update({minSeats:e.target.value})}/>{fieldError(errors,`${prefix}.minSeats`)}</label>
    <label><span>Maximum seats</span><input type="number" min="1" step="1" value={offer.maxSeats} onChange={e=>update({maxSeats:e.target.value})}/>{fieldError(errors,`${prefix}.maxSeats`)}</label>
    <label><span>Minimum journey revenue</span><div className="money-input"><span>$</span><input type="number" min="0" step="1" value={offer.minRevenueUsd} onChange={e=>update({minRevenueUsd:e.target.value})}/></div>{fieldError(errors,`${prefix}.minRevenueUsd`)}</label>

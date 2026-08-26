@@ -5,6 +5,19 @@ begin
   if not exists (
     select 1 from information_schema.columns
     where table_schema='pace_v2' and table_name='vehicle_route_offers'
+      and column_name='preferred_captain_id'
+  ) then raise exception 'Route Offers require an optional preferred captain'; end if;
+
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='pace_v2' and p.proname='pick_default_captain'
+      and pg_get_functiondef(p.oid) ilike '%vehicle_route_offer_id%'
+      and pg_get_functiondef(p.oid) ilike '%preferred_captain_id%'
+  ) then raise exception 'captain assignment must prefer the Route Offer captain'; end if;
+
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema='pace_v2' and table_name='vehicle_route_offers'
       and column_name='below_minimum_operation_mode' and is_nullable='NO'
   ) then raise exception 'Route Offers require a non-null below-minimum mode'; end if;
 

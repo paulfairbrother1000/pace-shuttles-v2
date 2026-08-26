@@ -8,9 +8,9 @@ describe('operator vehicle editor draft',()=>{
 
  it('converts stored cents, basis points and ratios to editable values',()=>{
   const draft=vehicleToDraft({vehicle_id:'v1',operator_id:'o1',vehicle_type_id:'boat',name:'Sea Sea Rider',capacity_seats:10,active:true},[
-   {offer_id:'of1',vehicle_id:'v1',route_id:'r1',route_name:'Jolly → Nobu',active:true,min_seats:4,max_seats:10,min_revenue_cents:140000,min_value_threshold_ratio:.8,below_minimum_operation_mode:'custom_threshold',post_min_discount_enabled:true,post_min_discount_bps:1500}
+   {offer_id:'of1',operator_id:'o1',vehicle_id:'v1',route_id:'r1',route_name:'Jolly → Nobu',active:true,min_seats:4,max_seats:10,min_revenue_cents:140000,min_value_threshold_ratio:.8,below_minimum_operation_mode:'custom_threshold',post_min_discount_enabled:true,post_min_discount_bps:1500,preferred_captain_id:'c2'}
   ]);
-  expect(draft.routeOffers[0]).toMatchObject({minRevenueUsd:'1400',discountPercent:'15',thresholdPercent:'80'});
+  expect(draft.routeOffers[0]).toMatchObject({preferredCaptainId:'c2',minRevenueUsd:'1400',discountPercent:'15',thresholdPercent:'80'});
  });
 
  it('validates capacity, duplicate routes and custom threshold',()=>{
@@ -32,7 +32,7 @@ describe('operator vehicle editor draft',()=>{
   Object.assign(offer,{minSeats:'4',minRevenueUsd:'1400',discountEnabled:false,discountPercent:'25',belowMinimumMode:'never',thresholdPercent:'80'});
   draft.routeOffers=[offer];
   const payload=toVehicleSavePayload(draft) as any;
-  expect(payload.route_offers[0]).toMatchObject({min_revenue_cents:140000,post_min_discount_bps:0,below_minimum_operation_mode:'never',min_value_threshold_ratio:null});
+  expect(payload.route_offers[0]).toMatchObject({preferred_captain_id:null,min_revenue_cents:140000,post_min_discount_bps:0,below_minimum_operation_mode:'never',min_value_threshold_ratio:null});
  });
 
  it('scopes every editor dataset to the operator selected by Site Admin',()=>{
