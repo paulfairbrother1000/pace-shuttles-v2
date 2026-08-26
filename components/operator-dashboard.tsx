@@ -7,6 +7,7 @@ import {
  operatorSetRouteOfferActive,operatorUpdateRouteOffer
 } from '@/lib/data';
 import {KpiCard,Section,Status} from './ui';
+import {vehicleCapacity} from '@/lib/vehicle-capacity';
 
 const money=(c:any)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(c||0)/100);
 const when=(x:any)=>x?new Date(x).toLocaleString([],{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
@@ -131,7 +132,7 @@ function Fleet({fleet,blocks,busy,run}:{fleet:any[],blocks:any[],busy:string,run
  const addBlock=(v:any)=>{const start=window.prompt('Unavailable from (YYYY-MM-DD HH:MM)');if(!start)return;const end=window.prompt('Unavailable until (YYYY-MM-DD HH:MM)');if(!end)return;const note=window.prompt('Reason / note','Maintenance')||'Unavailable';run('Vehicle unavailability',()=>operatorAddUnavailability(v.vehicle_id||v.id,new Date(start).toISOString(),new Date(end).toISOString(),'operator_unavailable',note))};
  return <div className="grid-2">
    <Section title="Fleet">
-     {fleet.map(v=><div className="notice" key={v.vehicle_id||v.id}><span><b>{v.name}</b><br/><small>{v.vehicle_type_name||v.vehicle_type} · max {v.max_seats||v.capacity||'—'} seats</small></span><span><Status value={v.active===false?'INACTIVE':'ACTIVE'}/><button className="btn secondary" style={{marginLeft:8}} disabled={!!busy} onClick={()=>addBlock(v)}>Block dates</button></span></div>)}
+     {fleet.map(v=><div className="notice" key={v.vehicle_id||v.id}><span><b>{v.name}</b><br/><small>{v.vehicle_type_name||v.vehicle_type} · capacity {vehicleCapacity(v)||'—'} seats</small></span><span><Status value={v.active===false?'INACTIVE':'ACTIVE'}/><button className="btn secondary" style={{marginLeft:8}} disabled={!!busy} onClick={()=>addBlock(v)}>Block dates</button></span></div>)}
      {!fleet.length&&<div className="empty-state">No vehicles linked to this operator.</div>}
    </Section>
    <Section title="Availability exceptions">
