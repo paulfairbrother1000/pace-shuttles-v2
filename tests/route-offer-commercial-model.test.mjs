@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const adminPage=fs.readFileSync(new URL('../app/admin/operators/[id]/page.tsx',import.meta.url),'utf8');
+const operatorDetail=fs.readFileSync(new URL('../components/operator-detail-route-offers.tsx',import.meta.url),'utf8');
+const operatorDashboard=fs.readFileSync(new URL('../components/operator-dashboard.tsx',import.meta.url),'utf8');
+
+test('site admin operator detail uses route offers and keeps vehicle creation non-commercial',()=>{
+  assert.match(adminPage,/operator-detail-route-offers/);
+  assert.match(operatorDetail,/Route Offers/);
+  assert.match(operatorDetail,/Physical passenger capacity/);
+  assert.doesNotMatch(operatorDetail,/Vehicle name'[\s\S]*Minimum journey revenue \(USD\)'/);
+  assert.match(operatorDetail,/Minimum journey revenue \(USD\)/);
+  assert.match(operatorDetail,/complete two-leg journey/i);
+  assert.doesNotMatch(operatorDetail,/default_min_revenue_cents/);
+});
+
+test('route offer creation captures independent vehicle-route commercial inputs',()=>{
+  assert.match(operatorDetail,/p_vehicle_id/);
+  assert.match(operatorDetail,/p_route_id/);
+  assert.match(operatorDetail,/p_min_seats/);
+  assert.match(operatorDetail,/p_max_seats/);
+  assert.match(operatorDetail,/p_min_revenue_cents/);
+  assert.match(operatorDetail,/opposite direction is a separate Route Offer/i);
+});
+
+test('operator self-service explains whole-journey economics',()=>{
+  assert.match(operatorDashboard,/Route participation & commercial offers/);
+  assert.match(operatorDashboard,/Minimum journey revenue/);
+});
