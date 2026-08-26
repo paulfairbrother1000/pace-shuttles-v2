@@ -10,6 +10,7 @@ import {
 } from '@/lib/data';
 import {KpiCard,Section,Status} from './ui';
 import {vehicleCapacity} from '@/lib/vehicle-capacity';
+import {AdminOperatorVehicleEditor} from './admin-operator-vehicle-editor';
 
 const money=(c:any)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(c||0)/100);
 const date=(x:any)=>x?new Date(x).toLocaleString():'—';
@@ -20,7 +21,7 @@ function useLoad(fn:any){
   return {rows,error};
 }
 
-export function OperatorDetailRouteOffers({id}:{id:string}){
+export function OperatorDetailRouteOffers({id,manageAsOperator=false}:{id:string;manageAsOperator?:boolean}){
   const {rows:operators,error:operatorError}=useLoad(loadOperators);
   const {rows:vehicles}=useLoad(loadVehicles);
   const {rows:captains}=useLoad(loadCaptains);
@@ -43,6 +44,13 @@ export function OperatorDetailRouteOffers({id}:{id:string}){
   const blocks=unavailability.filter(x=>x.operator_id===id);
   const currentOverride=overrides.find(x=>x.operator_id===id&&!x.effective_to);
   const countryCommission=countryCommissions.find(x=>x.country_id===operator.country_id&&!x.effective_to);
+
+  if(manageAsOperator)return <>
+    <Section title={`Managing ${operator.name}`} action={<Link className="btn secondary" href={`/admin/operators/${id}`}>Back to operator administration</Link>}>
+      <p className="data-note">You remain signed in as Site Admin. Vehicle and route changes below are scoped to {operator.name}.</p>
+    </Section>
+    <div style={{marginTop:12}}><AdminOperatorVehicleEditor operatorId={id}/></div>
+  </>;
 
   const done=(r:any,label:string)=>{
     if(r.error)setMsg(r.error.message||String(r.error));
@@ -105,7 +113,7 @@ export function OperatorDetailRouteOffers({id}:{id:string}){
   };
 
   return <>
-    <Section title={operator.name} action={<Link className="btn" href="/operator">Operator Dashboard</Link>}>
+    <Section title={operator.name} action={<Link className="btn" href={`/admin/operators/${id}?operator=${encodeURIComponent(operator.name)}`}>Manage as Operator</Link>}>
       <div className="grid-4">
         <KpiCard label="Quality" value={String(operator.quality_score??'—')}/>
         <KpiCard label="Vehicles" value={String(fleet.length)}/>

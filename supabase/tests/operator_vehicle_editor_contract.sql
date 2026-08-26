@@ -32,6 +32,14 @@ begin
       and pg_get_function_identity_arguments(p.oid)='p_vehicle jsonb'
   ) then raise exception 'operator aggregate save RPC is missing'; end if;
 
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid=p.pronamespace
+    where n.nspname='public' and p.proname='v2_operator_save_vehicle'
+      and pg_get_functiondef(p.oid) ilike '%pace_v2.is_site_admin()%'
+      and pg_get_functiondef(p.oid) ilike '%v_requested_operator_id%'
+      and pg_get_functiondef(p.oid) ilike '%vehicle does not belong to selected operator%'
+  ) then raise exception 'Site Admin must be able to save for the explicitly selected operator'; end if;
+
   if exists (
     select 1 from information_schema.routine_privileges
     where specific_schema='public' and routine_name='v2_operator_save_vehicle'

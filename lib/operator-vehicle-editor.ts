@@ -7,7 +7,7 @@ export type VehicleEditorRow={
 };
 
 export type RouteOfferRow={
- offer_id:string; vehicle_id:string; route_id:string; route_name:string; preferred?:boolean;
+ offer_id:string; operator_id:string; vehicle_id:string; route_id:string; route_name:string; preferred?:boolean;
  active:boolean; min_seats:number; max_seats:number; min_revenue_cents:number;
  min_value_threshold_ratio?:number|null; below_minimum_operation_mode?:BelowMinimumMode|null;
  post_min_discount_enabled:boolean; post_min_discount_bps:number;
@@ -16,6 +16,10 @@ export type RouteOfferRow={
 export type CaptainOption={operator_id:string;captain_id:string;captain_name:string;vehicle_type_id:string};
 export type RouteOption={operator_id:string;route_id:string;route_name:string;vehicle_type_id:string;country_id:string;locality_id?:string|null};
 export type VehicleTypeOption={operator_id:string;vehicle_type_id:string;vehicle_type_name:string};
+
+export function scopeVehicleEditorData<T extends Record<string,{operator_id:string}[]>>(operatorId:string,data:T):T{
+ return Object.fromEntries(Object.entries(data).map(([name,rows])=>[name,rows.filter(row=>row.operator_id===operatorId)])) as T;
+}
 
 export type RouteOfferDraft={
  key:string; offerId:string|null; routeId:string; routeName:string; preferred:boolean; active:boolean;

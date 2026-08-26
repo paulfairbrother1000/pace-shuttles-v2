@@ -10,6 +10,10 @@ const operatorPage=fs.readFileSync(new URL('../app/operator/page.tsx',import.met
 
 test('site admin operator detail uses route offers and keeps vehicle creation non-commercial',()=>{
   assert.match(adminPage,/operator-detail-route-offers/);
+  assert.match(operatorDetail,/Manage as Operator/);
+  assert.match(operatorDetail,/AdminOperatorVehicleEditor/);
+  assert.match(operatorDetail,/manageAsOperator/);
+  assert.match(operatorDetail,/operatorId=\{id\}/);
   assert.match(operatorDetail,/Route Offers/);
   assert.match(operatorDetail,/Physical passenger capacity/);
   assert.match(operatorDetail,/Minimum journey revenue \(USD\)/);

@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {blankVehicleDraft,newRouteOffer,toVehicleSavePayload,validateVehicleDraft,vehicleToDraft} from './operator-vehicle-editor';
+import {blankVehicleDraft,newRouteOffer,scopeVehicleEditorData,toVehicleSavePayload,validateVehicleDraft,vehicleToDraft} from './operator-vehicle-editor';
 
 describe('operator vehicle editor draft',()=>{
  it('creates a blank vehicle without commercial defaults',()=>{
@@ -33,5 +33,20 @@ describe('operator vehicle editor draft',()=>{
   draft.routeOffers=[offer];
   const payload=toVehicleSavePayload(draft) as any;
   expect(payload.route_offers[0]).toMatchObject({min_revenue_cents:140000,post_min_discount_bps:0,below_minimum_operation_mode:'never',min_value_threshold_ratio:null});
+ });
+
+ it('scopes every editor dataset to the operator selected by Site Admin',()=>{
+  const scoped=scopeVehicleEditorData('o1',{
+   vehicles:[{vehicle_id:'v1',operator_id:'o1'},{vehicle_id:'v2',operator_id:'o2'}],
+   offers:[{offer_id:'a1',operator_id:'o1'},{offer_id:'a2',operator_id:'o2'}],
+   captains:[{captain_id:'c1',operator_id:'o1'},{captain_id:'c2',operator_id:'o2'}],
+   routes:[{route_id:'r1',operator_id:'o1'},{route_id:'r2',operator_id:'o2'}],
+   vehicleTypes:[{vehicle_type_id:'t1',operator_id:'o1'},{vehicle_type_id:'t2',operator_id:'o2'}]
+  } as any);
+  expect(scoped.vehicles.map(x=>x.vehicle_id)).toEqual(['v1']);
+  expect(scoped.offers.map(x=>x.offer_id)).toEqual(['a1']);
+  expect(scoped.captains.map(x=>x.captain_id)).toEqual(['c1']);
+  expect(scoped.routes.map(x=>x.route_id)).toEqual(['r1']);
+  expect(scoped.vehicleTypes.map(x=>x.vehicle_type_id)).toEqual(['t1']);
  });
 });
