@@ -7,17 +7,17 @@ const adminPage=fs.readFileSync(new URL('../app/admin/operators/[id]/page.tsx',i
 const operatorDetail=fs.readFileSync(new URL('../components/operator-detail-route-offers.tsx',import.meta.url),'utf8');
 const operatorDashboard=fs.readFileSync(new URL('../components/operator-dashboard.tsx',import.meta.url),'utf8');
 const operatorPage=fs.readFileSync(new URL('../app/operator/page.tsx',import.meta.url),'utf8');
+const adminVehicleEditor=fs.readFileSync(new URL('../components/admin-operator-vehicle-editor.tsx',import.meta.url),'utf8');
+const vehicleEditorModel=fs.readFileSync(new URL('../lib/operator-vehicle-editor.ts',import.meta.url),'utf8');
 
 test('site admin operator detail uses route offers and keeps vehicle creation non-commercial',()=>{
   assert.match(adminPage,/operator-detail-route-offers/);
-  assert.match(operatorDetail,/Manage as Operator/);
   assert.match(operatorDetail,/AdminOperatorVehicleEditor/);
-  assert.match(operatorDetail,/manageAsOperator/);
   assert.match(operatorDetail,/operatorId=\{id\}/);
-  assert.match(operatorDetail,/Route Offers/);
-  assert.match(operatorDetail,/Physical passenger capacity/);
-  assert.match(operatorDetail,/Minimum journey revenue \(USD\)/);
-  assert.match(operatorDetail,/complete two-leg journey/i);
+  assert.doesNotMatch(operatorDetail,/Manage as Operator/);
+  assert.doesNotMatch(operatorDetail,/manageAsOperator/);
+  assert.doesNotMatch(operatorDetail,/title="Fleet"/);
+  assert.doesNotMatch(operatorDetail,/title="Route Offers"/);
   assert.doesNotMatch(operatorDetail,/default_min_revenue_cents/);
 });
 
@@ -27,12 +27,12 @@ test('vehicle capacity uses the physical capacity field',()=>{
 });
 
 test('route offer creation captures independent vehicle-route commercial inputs',()=>{
-  assert.match(operatorDetail,/p_vehicle_id/);
-  assert.match(operatorDetail,/p_route_id/);
-  assert.match(operatorDetail,/p_min_seats/);
-  assert.match(operatorDetail,/p_max_seats/);
-  assert.match(operatorDetail,/p_min_revenue_cents/);
-  assert.match(operatorDetail,/opposite direction is a separate Route Offer/i);
+  assert.match(adminVehicleEditor,/operatorSaveVehicle/);
+  assert.match(vehicleEditorModel,/vehicle_id/);
+  assert.match(vehicleEditorModel,/route_id/);
+  assert.match(vehicleEditorModel,/min_seats/);
+  assert.match(vehicleEditorModel,/max_seats/);
+  assert.match(vehicleEditorModel,/min_revenue_cents/);
 });
 
 test('operator self-service explains whole-journey economics',()=>{
