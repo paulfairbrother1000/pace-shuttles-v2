@@ -9,7 +9,9 @@ begin
   select max(vro.max_seats)
     into v_largest_offer
   from pace_v2.vehicle_route_offers vro
-  where vro.vehicle_id = new.id;
+  where vro.vehicle_id = new.id
+    and vro.active
+    and vro.effective_to is null;
 
   if v_largest_offer is not null and new.capacity_seats < v_largest_offer then
     raise exception 'Vehicle capacity % is below existing Route Offer maximum seats %',
@@ -28,4 +30,3 @@ before update of capacity_seats on pace_v2.vehicles
 for each row
 when (new.capacity_seats is distinct from old.capacity_seats)
 execute function pace_v2.validate_vehicle_capacity_change();
-

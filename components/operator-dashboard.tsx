@@ -3,6 +3,8 @@ import {useEffect,useMemo,useState} from 'react';
 import {
  loadOperatorJourneys,loadOperatorConsiderations,loadOperatorFleet,loadOperatorRouteOffers,
  loadOperatorUnavailability,loadOperatorQuality,loadOperatorFairness,
+ loadOperatorVehicleEditor,loadOperatorVehicleEditorCaptains,loadOperatorVehicleEditorTypes,
+ loadOperatorVehicleEditorRoutes,loadOperatorVehicleEditorOffers,operatorSaveVehicle,
  operatorWithdrawConsideration,operatorAddUnavailability,operatorRemoveUnavailability,
  operatorSetRouteOfferActive,operatorUpdateRouteOffer
 } from '@/lib/data';
@@ -10,6 +12,7 @@ import {KpiCard,Section,Status} from './ui';
 import {vehicleCapacity} from '@/lib/vehicle-capacity';
 import {operatorIdentity,operatorIdentityError,OperatorMembershipIdentity} from '@/lib/operator-identity';
 import {getSupabaseBrowserClient} from '@/lib/supabase';
+import {OperatorVehicleEditor} from './operator-vehicle-editor';
 
 const money=(c:any)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(c||0)/100);
 const when=(x:any)=>x?new Date(x).toLocaleString([],{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
@@ -31,9 +34,14 @@ export function OperatorDashboard(){
  const blocks=useRows(loadOperatorUnavailability);
  const quality=useRows(loadOperatorQuality);
  const fairness=useRows(loadOperatorFairness);
+ const editorVehicles=useRows(loadOperatorVehicleEditor);
+ const editorCaptains=useRows(loadOperatorVehicleEditorCaptains);
+ const editorTypes=useRows(loadOperatorVehicleEditorTypes);
+ const editorRoutes=useRows(loadOperatorVehicleEditorRoutes);
+ const editorOffers=useRows(loadOperatorVehicleEditorOffers);
  const [tab,setTab]=useState('overview'),[msg,setMsg]=useState(''),[busy,setBusy]=useState('');
 
- const refresh=async()=>Promise.all([journeys.reload(),considerations.reload(),fleet.reload(),offers.reload(),blocks.reload(),quality.reload(),fairness.reload()]);
+ const refresh=async()=>Promise.all([journeys.reload(),considerations.reload(),fleet.reload(),offers.reload(),blocks.reload(),quality.reload(),fairness.reload(),editorVehicles.reload(),editorCaptains.reload(),editorTypes.reload(),editorRoutes.reload(),editorOffers.reload()]);
  const run=async(name:string,fn:()=>Promise<any>)=>{setBusy(name);setMsg('');const r=await fn();setBusy('');if(r.error)setMsg(r.error.message||String(r.error));else{setMsg(name+' completed');await refresh()}};
 
  const under=considerations.rows.filter(x=>['eligible','open','filling_minimum','minimum_achieved','under_consideration'].includes(norm(x.status)));
@@ -43,7 +51,7 @@ export function OperatorDashboard(){
  const q=quality.rows[0]||{};
  const fair=fairness.rows[0]||{};
 
- const tabs=[['overview','Overview'],['consideration','Under consideration'],['confirmed','Confirmed'],['completed','Completed'],['fleet','Fleet & availability'],['offers','Route offers'],['quality','Quality & fairness']];
+ const tabs=[['overview','Overview'],['consideration','Under consideration'],['confirmed','Confirmed'],['completed','Completed'],['fleet','Fleet & availability'],['quality','Quality & fairness']];
 
  return <>
    <OperatorIdentityBanner/>
@@ -64,8 +72,7 @@ export function OperatorDashboard(){
    {tab==='consideration'&&<Consideration rows={under} busy={busy} run={run}/>}
    {tab==='confirmed'&&<JourneyList title="Trips Confirmed" rows={confirmed} confirmed/>}
    {tab==='completed'&&<JourneyList title="Trips Completed" rows={completed}/>}
-   {tab==='fleet'&&<Fleet fleet={fleet.rows} blocks={blocks.rows} busy={busy} run={run}/>}
-   {tab==='offers'&&<Offers rows={offers.rows} busy={busy} run={run}/>}
+   {tab==='fleet'&&<FleetEditor vehicles={editorVehicles.rows} offers={editorOffers.rows} captains={editorCaptains.rows} routes={editorRoutes.rows} vehicleTypes={editorTypes.rows} blocks={blocks.rows} busy={busy} setBusy={setBusy} setMsg={setMsg} refresh={refresh}/>}
    {tab==='quality'&&<Quality quality={quality.rows} fairness={fairness.rows}/>}
 
    {(journeys.error||considerations.error||fleet.error||offers.error)&&
@@ -159,6 +166,18 @@ function JourneyList({title,rows,confirmed=false}:{title:string,rows:any[],confi
    </div>)}
    {!rows.length&&<div className="empty-state">No journeys in this section.</div>}
  </Section>;
+}
+
+function FleetEditor({vehicles,offers,captains,routes,vehicleTypes,busy,setBusy,setMsg,refresh}:{vehicles:any[],offers:any[],captains:any[],routes:any[],vehicleTypes:any[],blocks:any[],busy:string,setBusy:any,setMsg:any,refresh:any}){
+ const save=async(payload:Record<string,unknown>)=>{
+  setBusy('Vehicle save');setMsg('');
+  const result=await operatorSaveVehicle(payload);
+  setBusy('');
+  if(result.error){setMsg(result.error.message||String(result.error));return false;}
+  setMsg('Vehicle saved');await refresh();return true;
+ };
+ const block=(v:any)=>{const start=window.prompt('Unavailable from (YYYY-MM-DD HH:MM)');if(!start)return;const end=window.prompt('Unavailable until (YYYY-MM-DD HH:MM)');if(!end)return;const note=window.prompt('Reason / note','Maintenance')||'Unavailable';setBusy('Vehicle unavailability');void operatorAddUnavailability(v.vehicle_id||v.id,new Date(start).toISOString(),new Date(end).toISOString(),'operator_unavailable',note).then(async result=>{setBusy('');if(result.error)setMsg(result.error.message);else{setMsg('Vehicle unavailability completed');await refresh()}})};
+ return <OperatorVehicleEditor vehicles={vehicles} offers={offers} captains={captains} routes={routes} vehicleTypes={vehicleTypes} busy={!!busy} onSave={save} onBlockDates={block}/>;
 }
 
 function Fleet({fleet,blocks,busy,run}:{fleet:any[],blocks:any[],busy:string,run:any}){

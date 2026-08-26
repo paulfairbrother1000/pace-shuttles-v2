@@ -111,6 +111,12 @@ export const adminCancelPendingNotification=(notificationId:string)=>rpc('v2_adm
 export async function loadOperatorConsiderations(){return select('v2_operator_my_considerations','scheduled_departure_ts',500)}
 export async function loadOperatorFleet(){return select('v2_operator_my_fleet','name',500)}
 export async function loadOperatorRouteOffers(){return select('v2_operator_my_route_offers','route_name',1000)}
+export async function loadOperatorVehicleEditor(){return rpc('v2_operator_load_vehicle_editor',{})}
+export async function loadOperatorVehicleEditorCaptains(){return rpc('v2_operator_load_vehicle_editor_captains',{})}
+export async function loadOperatorVehicleEditorTypes(){return rpc('v2_operator_load_vehicle_editor_types',{})}
+export async function loadOperatorVehicleEditorRoutes(){return rpc('v2_operator_load_vehicle_editor_routes',{})}
+export async function loadOperatorVehicleEditorOffers(){return rpc('v2_operator_load_vehicle_editor_offers',{})}
+export const operatorSaveVehicle=(payload:Record<string,unknown>)=>rpc('v2_operator_save_vehicle',{p_vehicle:payload});
 export async function loadOperatorUnavailability(){return select('v2_operator_my_unavailability','start_ts',1000)}
 export async function loadOperatorQuality(){return select('v2_operator_my_quality','operator_name',100)}
 export async function loadOperatorFairness(){return select('v2_operator_my_fairness','operator_name',500)}
