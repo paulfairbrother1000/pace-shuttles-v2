@@ -1,5 +1,6 @@
 'use client';
 import { getSupabaseBrowserClient } from './supabase';
+import { buildGeographyImagePath, type GeographyKind } from './admin-geography';
 
 export type DbRow = Record<string, any>;
 async function select(table:string, order?:string, limit=500){
@@ -67,6 +68,7 @@ export const adminEndOperatorCommissionOverride=(operatorId:string)=>rpc('v2_adm
 
 export async function loadRegions(){return select('v2_regions','name',500)}
 export async function loadLocalities(){return select('v2_localities','name',500)}
+export async function loadTransportTypePlaces(){return rpc('v2_admin_list_transport_type_places',{})}
 export async function loadRouteVehicleTypes(){return select('v2_route_vehicle_types','route_name',1000)}
 export async function loadOperatorVehicleTypes(){return select('v2_operator_vehicle_types','operator_name',1000)}
 export const adminUpdateCountryHierarchy=(countryId:string,isLarge:boolean,regionLabel:string,localityLabel:string)=>rpc('v2_admin_update_country_hierarchy',{p_country_id:countryId,p_is_large:isLarge,p_region_label:regionLabel,p_locality_label:localityLabel});
@@ -82,6 +84,18 @@ export const adminSetOperatorVehicleType=(operatorId:string,vehicleTypeId:string
 export const adminUpdateRoute=(a:any)=>rpc('v2_admin_update_route',a);
 export const adminUpdatePickup=(a:any)=>rpc('v2_admin_update_pickup',a);
 export const adminUpdateDestination=(a:any)=>rpc('v2_admin_update_destination',a);
+export const adminSaveCountry=(a:any)=>rpc('v2_admin_save_country',a);
+export const adminSavePickup=(a:any)=>rpc('v2_admin_save_pickup',a);
+export const adminSaveDestination=(a:any)=>rpc('v2_admin_save_destination',a);
+export async function adminUploadGeographyImage(kind:GeographyKind,name:string,file:File){
+  const s=getSupabaseBrowserClient(); if(!s)return {data:null,error:new Error('Supabase not configured')};
+  if(!file.type.startsWith('image/'))return {data:null,error:new Error('Please select an image file')};
+  if(file.size>8*1024*1024)return {data:null,error:new Error('Image must be no larger than 8 MB')};
+  const path=buildGeographyImagePath(kind,name,file.name);
+  const uploaded=await s.storage.from('images').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type});
+  if(uploaded.error)return {data:null,error:uploaded.error};
+  return {data:s.storage.from('images').getPublicUrl(path).data.publicUrl,error:null};
+}
 
 export const adminCreateSettlement=(allocationId:string,dueAt:string)=>rpc('v2_admin_create_settlement',{p_confirmed_allocation_id:allocationId,p_due_at:dueAt});
 export const adminApplyOperatorLiabilities=(settlementId:string)=>rpc('v2_admin_apply_operator_liabilities',{p_settlement_id:settlementId});
