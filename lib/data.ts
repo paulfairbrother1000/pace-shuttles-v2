@@ -39,7 +39,11 @@ export async function rpc(name:string,args:Record<string,any>={}){
   const s=getSupabaseBrowserClient(); if(!s) return {data:null,error:new Error('Supabase not configured')};
   return s.rpc(name,args);
 }
-export async function loadVehicleTypes(){return select('v2_vehicle_types','display_order',250)}
+export function publicStorageImageUrl(src?:string|null){
+  if(!src||/^(https?:|data:|\/)/i.test(src))return src||'';
+  const s=getSupabaseBrowserClient();return s?.storage.from('images').getPublicUrl(src).data.publicUrl||src;
+}
+export async function loadVehicleTypes(){const r=await select('v2_vehicle_types','display_order',250);return {...r,data:r.data.map(x=>({...x,picture_url:publicStorageImageUrl(x.picture_url)}))}}
 export async function loadVehicleRouteOffers(){return select('v2_vehicle_route_offers','created_at',1000)}
 export async function loadVehicleUnavailability(){return select('v2_vehicle_availability_exceptions','start_ts',1000)}
 export async function loadCountryCommissions(){return select('v2_country_commissions','effective_from',500)}
@@ -63,6 +67,7 @@ export const adminAddVehicleUnavailability=(a:any)=>rpc('v2_admin_add_vehicle_un
 export const adminCreateOperator=(a:any)=>rpc('v2_admin_create_operator',a);
 export const adminUpdateOperator=(a:any)=>rpc('v2_admin_update_operator',a);
 export const adminSaveOperator=(a:any)=>rpc('v2_admin_save_operator',a);
+export const adminSaveVehicleType=(a:any)=>rpc('v2_admin_save_vehicle_type',a);
 export async function adminUploadOperatorLogo(name:string,file:File){
   const s=getSupabaseBrowserClient(); if(!s)return {data:null,error:new Error('Supabase not configured')};
   if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type))return {data:null,error:new Error('Please select a JPEG, PNG, WebP or GIF image')};
@@ -70,6 +75,17 @@ export async function adminUploadOperatorLogo(name:string,file:File){
   const clean=String(name||'operator').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'operator';
   const ext=String(file.name||'logo').split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g,'')||'img';
   const path=`operator-logos/${clean}-${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const uploaded=await s.storage.from('images').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type});
+  if(uploaded.error)return {data:null,error:uploaded.error};
+  return {data:s.storage.from('images').getPublicUrl(path).data.publicUrl,error:null};
+}
+export async function adminUploadTransportTypeImage(name:string,file:File){
+  const s=getSupabaseBrowserClient(); if(!s)return {data:null,error:new Error('Supabase not configured')};
+  if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type))return {data:null,error:new Error('Please select a JPEG, PNG, WebP or GIF image')};
+  if(file.size>8*1024*1024)return {data:null,error:new Error('Image must be no larger than 8 MB')};
+  const clean=String(name||'transport-type').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'transport-type';
+  const ext=String(file.name||'image').split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g,'')||'img';
+  const path=`transport-types/${clean}-${Date.now()}-${crypto.randomUUID()}.${ext}`;
   const uploaded=await s.storage.from('images').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type});
   if(uploaded.error)return {data:null,error:uploaded.error};
   return {data:s.storage.from('images').getPublicUrl(path).data.publicUrl,error:null};
