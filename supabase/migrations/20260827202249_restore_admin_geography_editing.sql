@@ -158,6 +158,10 @@ revoke all on function public.v2_admin_save_country(uuid,text,text,text,text,tex
 revoke all on function public.v2_admin_save_pickup(uuid,uuid,text,text,text,text,text,text,text,text,uuid,uuid,text,text,uuid,uuid,numeric,numeric,boolean) from public;
 revoke all on function public.v2_admin_save_destination(uuid,uuid,text,text,text,text,text,text,text,text,text,date,date,text,text,text,text,text,text,text,uuid,uuid,numeric,numeric,boolean) from public;
 revoke all on function public.v2_admin_list_transport_type_places() from public;
+revoke all on function public.v2_admin_save_country(uuid,text,text,text,text,text,boolean,text,text,boolean) from anon;
+revoke all on function public.v2_admin_save_pickup(uuid,uuid,text,text,text,text,text,text,text,text,uuid,uuid,text,text,uuid,uuid,numeric,numeric,boolean) from anon;
+revoke all on function public.v2_admin_save_destination(uuid,uuid,text,text,text,text,text,text,text,text,text,date,date,text,text,text,text,text,text,text,uuid,uuid,numeric,numeric,boolean) from anon;
+revoke all on function public.v2_admin_list_transport_type_places() from anon;
 grant execute on function public.v2_admin_save_country(uuid,text,text,text,text,text,boolean,text,text,boolean) to authenticated;
 grant execute on function public.v2_admin_save_pickup(uuid,uuid,text,text,text,text,text,text,text,text,uuid,uuid,text,text,uuid,uuid,numeric,numeric,boolean) to authenticated;
 grant execute on function public.v2_admin_save_destination(uuid,uuid,text,text,text,text,text,text,text,text,text,date,date,text,text,text,text,text,text,text,uuid,uuid,numeric,numeric,boolean) to authenticated;
