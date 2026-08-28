@@ -1,0 +1,45 @@
+'use client';
+
+import {useEffect,useMemo,useState} from 'react';
+import {adminSaveOperator,adminUploadOperatorLogo,loadCancellationPolicies,loadCountries,loadLocalities,loadRegions} from '@/lib/data';
+
+type Props={open:boolean;operator?:any;onClose:()=>void;onSaved:()=>void};
+
+const empty={name:'',email:'',admin_email:'',contact_email:'',notification_email:'',phone:'',address1:'',address2:'',country_id:'',region_id:'',locality_id:'',town:'',region:'',postal_code:'',logo_url:'',cancellation_policy_id:'',white_label_member:false,active:true};
+
+function Field({label,children,hint}:{label:string;children:any;hint?:string}){
+ return <label className="form-field"><span>{label}</span>{children}{hint&&<small>{hint}</small>}</label>;
+}
+
+export function AdminOperatorForm({open,operator,onClose,onSaved}:Props){
+ const [form,setForm]=useState<any>(empty),[countries,setCountries]=useState<any[]>([]),[regions,setRegions]=useState<any[]>([]),[localities,setLocalities]=useState<any[]>([]),[policies,setPolicies]=useState<any[]>([]),[logoFile,setLogoFile]=useState<File|null>(null),[logoPreview,setLogoPreview]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ useEffect(()=>{if(!open)return;Promise.all([loadCountries(),loadRegions(),loadLocalities(),loadCancellationPolicies()]).then(([c,r,l,p])=>{setCountries(c.data);setRegions(r.data);setLocalities(l.data);setPolicies(p.data)});setForm({...empty,...operator,country_id:operator?.country_id||'',region_id:operator?.region_id||'',locality_id:operator?.locality_id||'',cancellation_policy_id:operator?.cancellation_policy_id||'',admin_email:operator?.admin_email||operator?.email||''});setLogoFile(null);setError('')},[open,operator]);
+ useEffect(()=>{if(!logoFile){setLogoPreview('');return}const url=URL.createObjectURL(logoFile);setLogoPreview(url);return()=>URL.revokeObjectURL(url)},[logoFile]);
+ const countryRegions=useMemo(()=>regions.filter(x=>!form.country_id||x.country_id===form.country_id),[regions,form.country_id]);
+ const regionLocalities=useMemo(()=>localities.filter(x=>(!form.country_id||x.country_id===form.country_id)&&(!form.region_id||x.region_id===form.region_id)),[localities,form.country_id,form.region_id]);
+ const set=(name:string,value:any)=>setForm((x:any)=>({...x,[name]:value}));
+ const save=async()=>{const adminEmail=String(form.admin_email||'').trim();if(!String(form.name||'').trim())return setError('Operator name is required');if(!adminEmail)return setError('Admin email is required');if(!/^\S+@\S+\.\S+$/.test(adminEmail))return setError('Enter a valid admin email address');if(!form.country_id)return setError('Country is required');setBusy(true);setError('');let logo_url=String(form.logo_url||'').trim()||null;if(logoFile){const uploaded=await adminUploadOperatorLogo(form.name,logoFile);if(uploaded.error){setBusy(false);return setError(uploaded.error.message)}logo_url=uploaded.data}const result=await adminSaveOperator({p_operator_id:operator?.id||null,p_name:String(form.name).trim(),p_country_id:form.country_id,p_admin_email:adminEmail,p_email:String(form.email||'').trim()||null,p_contact_email:String(form.contact_email||'').trim()||null,p_notification_email:String(form.notification_email||'').trim()||null,p_phone:String(form.phone||'').trim()||null,p_address1:String(form.address1||'').trim()||null,p_address2:String(form.address2||'').trim()||null,p_region_id:form.region_id||null,p_locality_id:form.locality_id||null,p_town:String(form.town||'').trim()||null,p_region_text:String(form.region||'').trim()||null,p_postal_code:String(form.postal_code||'').trim()||null,p_logo_url:logo_url,p_white_label_member:!!form.white_label_member,p_active:!!form.active,p_cancellation_policy_id:form.cancellation_policy_id||null});setBusy(false);if(result.error)setError(result.error.message);else onSaved()};
+ if(!open)return null;
+ return <div className="modal-backdrop" role="presentation" onMouseDown={e=>{if(e.currentTarget===e.target&&!busy)onClose()}}><div className="modal-card operator-form-modal" role="dialog" aria-modal="true" aria-label={operator?'Edit operator':'Add operator'}><div className="modal-head"><div><h2>{operator?'Edit operator':'Add operator'}</h2><p>Complete operator identity, contact, location and administration details.</p></div><button className="modal-close" disabled={busy} onClick={onClose} aria-label="Close">×</button></div><div className="modal-body"><div className="form-grid two-col">
+  <Field label="Operator name"><input name="name" value={form.name||''} onChange={e=>set('name',e.target.value)} autoComplete="organization"/></Field>
+  <Field label="Admin email" hint="Primary administrator for this operator."><input name="admin_email" type="email" value={form.admin_email||''} onChange={e=>set('admin_email',e.target.value)} autoComplete="email"/></Field>
+  <Field label="General email"><input name="email" type="email" value={form.email||''} onChange={e=>set('email',e.target.value)}/></Field>
+  <Field label="Contact email"><input name="contact_email" type="email" value={form.contact_email||''} onChange={e=>set('contact_email',e.target.value)}/></Field>
+  <Field label="Notification email"><input name="notification_email" type="email" value={form.notification_email||''} onChange={e=>set('notification_email',e.target.value)}/></Field>
+  <Field label="Telephone"><input name="phone" type="tel" value={form.phone||''} onChange={e=>set('phone',e.target.value)} autoComplete="tel"/></Field>
+  <Field label="Country"><select name="country_id" value={form.country_id||''} onChange={e=>setForm((x:any)=>({...x,country_id:e.target.value,region_id:'',locality_id:''}))}><option value="">Select country…</option>{countries.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
+  <Field label="Address line 1"><input name="address1" value={form.address1||''} onChange={e=>set('address1',e.target.value)} autoComplete="address-line1"/></Field>
+  <Field label="Address line 2"><input name="address2" value={form.address2||''} onChange={e=>set('address2',e.target.value)} autoComplete="address-line2"/></Field>
+  <Field label="Region / state"><select name="region_id" value={form.region_id||''} onChange={e=>setForm((x:any)=>({...x,region_id:e.target.value,locality_id:''}))}><option value="">Not specified</option>{countryRegions.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
+  <Field label="Town / locality"><select name="locality_id" value={form.locality_id||''} onChange={e=>{const locality=regionLocalities.find(x=>x.id===e.target.value);setForm((x:any)=>({...x,locality_id:e.target.value,town:locality?.name||x.town}))}}><option value="">Not specified</option>{regionLocalities.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
+  <Field label="Town / city text"><input name="town" value={form.town||''} onChange={e=>set('town',e.target.value)} autoComplete="address-level2"/></Field>
+  <Field label="Region text"><input name="region" value={form.region||''} onChange={e=>set('region',e.target.value)} autoComplete="address-level1"/></Field>
+  <Field label="Postal code"><input name="postal_code" value={form.postal_code||''} onChange={e=>set('postal_code',e.target.value)} autoComplete="postal-code"/></Field>
+  <Field label="Cancellation policy"><select name="cancellation_policy_id" value={form.cancellation_policy_id||''} onChange={e=>set('cancellation_policy_id',e.target.value)}><option value="">Country/default policy</option>{policies.map(x=><option key={x.id} value={x.id}>{x.name}</option>)}</select></Field>
+  <Field label="Logo URL" hint="Existing logo is retained unless replaced."><input name="logo_url" type="url" value={form.logo_url||''} onChange={e=>set('logo_url',e.target.value)} placeholder="https://…"/></Field>
+  <Field label="Upload logo" hint="JPEG, PNG, WebP or GIF; maximum 8 MB."><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={e=>setLogoFile(e.target.files?.[0]||null)}/></Field>
+  {(logoPreview||form.logo_url)&&<div className="operator-logo-preview"><img src={logoPreview||form.logo_url} alt="Operator logo preview"/></div>}
+  <label className="check-row"><input name="white_label_member" type="checkbox" checked={!!form.white_label_member} onChange={e=>set('white_label_member',e.target.checked)}/><span><b>White-label member</b><small>Operator participates in white-label services.</small></span></label>
+  <label className="check-row"><input name="active" type="checkbox" checked={!!form.active} onChange={e=>set('active',e.target.checked)}/><span><b>Active operator</b><small>Available for administration and allocation setup.</small></span></label>
+ </div>{error&&<p className="action-error" role="alert">{error}</p>}</div><div className="modal-footer"><button className="btn secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="btn" disabled={busy} onClick={save}>{busy?'Saving…':operator?'Save operator':'Create operator'}</button></div></div></div>;
+}
