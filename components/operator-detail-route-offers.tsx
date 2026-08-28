@@ -8,6 +8,7 @@ import {
 } from '@/lib/data';
 import {KpiCard,Section,Status} from './ui';
 import {AdminOperatorVehicleEditor} from './admin-operator-vehicle-editor';
+import {AdminOperatorForm} from './admin-operator-form';
 
 const date=(x:any)=>x?new Date(x).toLocaleString():'—';
 
@@ -27,6 +28,7 @@ export function OperatorDetailRouteOffers({id}:{id:string}){
   const {rows:countryCommissions}=useLoad(loadCountryCommissions);
   const {rows:policies}=useLoad(loadCancellationPolicies);
   const [msg,setMsg]=useState('');
+  const [editing,setEditing]=useState(false);
   const operator=operators.find(x=>x.id===id);
   if(!operator)return <Section title="Operator"><div className="empty-state">{operatorError||'Loading operator…'}</div></Section>;
 
@@ -61,7 +63,7 @@ export function OperatorDetailRouteOffers({id}:{id:string}){
       <Section title="Operator administration">
         <div className="notice"><span>Admin email</span><b>{operator.admin_email||operator.email||'—'}</b></div>
         <div className="notice"><span>Cancellation policy</span><b>{policies.find(p=>p.id===operator.cancellation_policy_id)?.name||'Default / none'}</b></div>
-        <button className="btn secondary" onClick={async()=>{const email=window.prompt('Operator admin email',operator.admin_email||operator.email||'')||null;const phone=window.prompt('Phone',operator.phone||'')||null;done(await adminUpdateOperator({p_operator_id:id,p_admin_email:email,p_phone:phone,p_country_id:operator.country_id,p_region_id:operator.region_id,p_locality_id:operator.locality_id,p_town:operator.town,p_region_text:operator.region,p_active:operator.active,p_cancellation_policy_id:operator.cancellation_policy_id}),'Operator contact')}}>Edit contact</button>
+        <button className="btn secondary" onClick={()=>setEditing(true)}>Edit operator</button>
       </Section>
     </div>
 
@@ -81,6 +83,6 @@ export function OperatorDetailRouteOffers({id}:{id:string}){
       {blocks.map(b=><div className="notice" key={b.id}><span><b>{b.vehicle_name}</b><br/><small>{date(b.start_ts)} → {date(b.end_ts)}</small></span><span>{b.reason_code||'Unavailable'}</span></div>)}
       {!blocks.length&&<div className="empty-state">No availability exceptions.</div>}
     </Section>
-    {msg&&<p className={msg.toLowerCase().includes('saved')?'action-success':'action-error'}>{msg}</p>}
+    {msg&&<p className={msg.toLowerCase().includes('saved')?'action-success':'action-error'}>{msg}</p>}<AdminOperatorForm open={editing} operator={operator} onClose={()=>setEditing(false)} onSaved={()=>window.location.reload()}/>
   </>;
 }

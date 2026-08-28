@@ -62,6 +62,18 @@ export const adminAddVehicleUnavailability=(a:any)=>rpc('v2_admin_add_vehicle_un
 
 export const adminCreateOperator=(a:any)=>rpc('v2_admin_create_operator',a);
 export const adminUpdateOperator=(a:any)=>rpc('v2_admin_update_operator',a);
+export const adminSaveOperator=(a:any)=>rpc('v2_admin_save_operator',a);
+export async function adminUploadOperatorLogo(name:string,file:File){
+  const s=getSupabaseBrowserClient(); if(!s)return {data:null,error:new Error('Supabase not configured')};
+  if(!['image/jpeg','image/png','image/webp','image/gif'].includes(file.type))return {data:null,error:new Error('Please select a JPEG, PNG, WebP or GIF image')};
+  if(file.size>8*1024*1024)return {data:null,error:new Error('Logo must be no larger than 8 MB')};
+  const clean=String(name||'operator').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'operator';
+  const ext=String(file.name||'logo').split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g,'')||'img';
+  const path=`operator-logos/${clean}-${Date.now()}-${crypto.randomUUID()}.${ext}`;
+  const uploaded=await s.storage.from('images').upload(path,file,{cacheControl:'3600',upsert:false,contentType:file.type});
+  if(uploaded.error)return {data:null,error:uploaded.error};
+  return {data:s.storage.from('images').getPublicUrl(path).data.publicUrl,error:null};
+}
 export const adminSetCountryCommission=(countryId:string,bps:number,note:string)=>rpc('v2_admin_set_country_commission',{p_country_id:countryId,p_commission_bps:bps,p_note:note});
 export const adminSetOperatorCommissionOverride=(operatorId:string,bps:number,reason:string)=>rpc('v2_admin_set_operator_commission_override',{p_operator_id:operatorId,p_commission_bps:bps,p_reason:reason});
 export const adminEndOperatorCommissionOverride=(operatorId:string)=>rpc('v2_admin_end_operator_commission_override',{p_operator_id:operatorId});
