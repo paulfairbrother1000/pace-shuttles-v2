@@ -34,10 +34,10 @@ begin
     from pg_indexes
     where schemaname = 'pace_v2'
       and tablename = 'vehicle_route_offers'
-      and indexname = 'vehicle_route_offers_one_current_per_vehicle_route'
+      and indexname = 'vehicle_route_offers_one_current_per_vehicle_service'
       and indexdef ilike '%unique%'
   ) then
-    raise exception 'current Vehicle + Route offers must be unique';
+    raise exception 'current Vehicle + Service offers must be unique';
   end if;
 
   if not exists (
