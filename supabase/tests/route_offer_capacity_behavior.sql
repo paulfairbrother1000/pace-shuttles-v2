@@ -20,12 +20,12 @@ begin
   rejected := false;
   begin
     insert into pace_v2.vehicle_route_offers(
-      vehicle_id,route_id,preferred,active,min_seats,max_seats,
-      min_revenue_cents,min_value_threshold_ratio,
+      vehicle_id,service_id,route_id,preferred,active,min_seats,max_seats,
+      min_revenue_cents,min_value_threshold_ratio,below_minimum_operation_mode,
       post_min_discount_enabled,post_min_discount_bps
     ) values (
-      o.vehicle_id,o.route_id,false,false,1,v_capacity+1,
-      o.min_revenue_cents,o.min_value_threshold_ratio,false,0
+      o.vehicle_id,o.service_id,o.route_id,false,false,1,v_capacity+1,
+      o.min_revenue_cents,o.min_value_threshold_ratio,o.below_minimum_operation_mode,false,0
     );
   exception when others then
     if sqlerrm ilike '%exceed vehicle capacity%' then rejected := true;
@@ -36,12 +36,12 @@ begin
   rejected := false;
   begin
     insert into pace_v2.vehicle_route_offers(
-      vehicle_id,route_id,preferred,active,min_seats,max_seats,
-      min_revenue_cents,min_value_threshold_ratio,
+      vehicle_id,service_id,route_id,preferred,active,min_seats,max_seats,
+      min_revenue_cents,min_value_threshold_ratio,below_minimum_operation_mode,
       post_min_discount_enabled,post_min_discount_bps
     ) values (
-      o.vehicle_id,o.route_id,false,true,o.min_seats,o.max_seats,
-      o.min_revenue_cents,o.min_value_threshold_ratio,
+      o.vehicle_id,o.service_id,o.route_id,false,true,o.min_seats,o.max_seats,
+      o.min_revenue_cents,o.min_value_threshold_ratio,o.below_minimum_operation_mode,
       o.post_min_discount_enabled,o.post_min_discount_bps
     );
   exception when unique_violation then rejected := true;
@@ -49,12 +49,12 @@ begin
   if not rejected then raise exception 'duplicate current Route Offer was accepted'; end if;
 
   insert into pace_v2.vehicle_route_offers(
-    vehicle_id,route_id,preferred,active,min_seats,max_seats,
-    min_revenue_cents,min_value_threshold_ratio,
+    vehicle_id,service_id,route_id,preferred,active,min_seats,max_seats,
+    min_revenue_cents,min_value_threshold_ratio,below_minimum_operation_mode,
     post_min_discount_enabled,post_min_discount_bps,effective_from,effective_to
   ) values (
-    o.vehicle_id,o.route_id,false,false,o.min_seats,o.max_seats,
-    o.min_revenue_cents,o.min_value_threshold_ratio,
+    o.vehicle_id,o.service_id,o.route_id,false,false,o.min_seats,o.max_seats,
+    o.min_revenue_cents,o.min_value_threshold_ratio,o.below_minimum_operation_mode,
     o.post_min_discount_enabled,o.post_min_discount_bps,
     now()-interval '2 minutes',now()-interval '1 minute'
   );
@@ -65,7 +65,7 @@ begin
     set capacity_seats = o.max_seats-1
     where id = o.vehicle_id;
   exception when others then
-    if sqlerrm ilike '%below existing Route Offer maximum%' then rejected := true;
+    if sqlerrm ilike '%below%Route Offer maximum%' then rejected := true;
     else raise; end if;
   end;
   if not rejected then raise exception 'unsafe capacity reduction was accepted'; end if;
