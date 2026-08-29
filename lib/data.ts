@@ -25,6 +25,14 @@ export async function loadDestinations(){return select('v2_destinations','name',
 export async function loadPickups(){return select('v2_pickup_points','name',500)}
 export async function loadVehicles(){return select('v2_vehicles','name',500)}
 export async function loadCaptains(){return select('v2_captains','first_name',500)}
+export async function loadPartnerFormCountries(){return select('v2_public_partner_form_countries','name',250)}
+export async function loadPartnerFormTransportTypes(){return select('v2_public_partner_form_transport_types','display_order',250)}
+export async function loadPartnerFormDestinationTypes(){return select('v2_public_partner_form_destination_types','display_order',250)}
+export async function loadPartnerFormPlaces(){return select('v2_public_partner_form_places','name',500)}
+export const submitPartnerApplication=(application:Record<string,any>)=>rpc('v2_public_submit_partner_application',{p_application:application});
+export async function loadAdminPartnerApplications(){return select('v2_admin_partner_applications','created_at',500)}
+export const adminSetPartnerApplicationStatus=(id:string,status:'under_review'|'rejected',admin_notes:string)=>rpc('v2_admin_set_partner_application_status',{p_application_id:id,p_status:status,p_admin_notes:admin_notes||null});
+export const adminApprovePartnerApplication=(id:string)=>rpc('v2_admin_approve_partner_application',{p_application_id:id});
 
 export async function loadAdminLiveOperationsDetail(){return select('v2_admin_live_operations_detail','scheduled_departure_ts',500)}
 export async function loadAdminJourneyBookings(){return select('v2_admin_journey_bookings','booked_at',1000)}
@@ -115,6 +123,7 @@ export const adminUpdateDestination=(a:any)=>rpc('v2_admin_update_destination',a
 export const adminSaveCountry=(a:any)=>rpc('v2_admin_save_country',a);
 export const adminSavePickup=(a:any)=>rpc('v2_admin_save_pickup',a);
 export const adminSaveDestination=(a:any)=>rpc('v2_admin_save_destination',a);
+export const adminSetDestinationPublished=(destinationId:string,published:boolean)=>rpc('v2_admin_set_destination_published',{p_destination_id:destinationId,p_published:published});
 export async function adminUploadGeographyImage(kind:GeographyKind,name:string,file:File){
   const s=getSupabaseBrowserClient(); if(!s)return {data:null,error:new Error('Supabase not configured')};
   if(!file.type.startsWith('image/'))return {data:null,error:new Error('Please select an image file')};

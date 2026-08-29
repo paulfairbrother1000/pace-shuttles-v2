@@ -5,6 +5,7 @@ import {
   buildGeographyImagePath,
   buildPickupPayload,
   normalizeGoogleMapsUrl,
+  validateDestinationPublication,
 } from './admin-geography';
 
 describe('admin geography contracts', () => {
@@ -71,5 +72,34 @@ describe('admin geography contracts', () => {
       .toBe('destinations/nobu-barbuda-1720000000000.webp');
     expect(buildGeographyImagePath('country', 'Antigua & Barbuda', 'hero.png', 1720000000000))
       .toBe('countries/antigua-and-barbuda-1720000000000.png');
+  });
+
+  it('reports every mandatory destination publication field', () => {
+    expect(validateDestinationPublication({}, { is_large: true }).map(x => x.field)).toEqual([
+      'country_id','region_id','locality_id','name','destination_type','description','picture_url',
+      'address','latitude','longitude','directions_url','wet_or_dry','arrival_notes','contact',
+    ]);
+  });
+
+  it('accepts a complete small-country destination', () => {
+    expect(validateDestinationPublication({
+      country_id: 'country-1', name: 'Nobu Barbuda', destination_type: 'Restaurant',
+      description: 'Waterfront dining', picture_url: 'https://img.example/nobu.jpg',
+      address1: 'Codrington Lagoon', latitude: 17.635, longitude: -61.828,
+      directions_url: 'https://maps.app.goo.gl/abc', wet_or_dry: 'wet',
+      arrival_notes: 'Use the guest dock', email: 'hello@example.com',
+    }, { is_large: false })).toEqual([]);
+  });
+
+  it('rejects invalid coordinates and non-Google directions links', () => {
+    const issues=validateDestinationPublication({
+      country_id:'country-1',name:'Place',destination_type:'Resort',description:'Description',picture_url:'image.jpg',
+      town:'Town',latitude:91,longitude:-181,directions_url:'https://example.com',wet_or_dry:'dry',
+      arrival_notes:'Reception',phone:'+1 268 555 0100',
+    },{is_large:false});
+    expect(issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({field:'latitude'}),expect.objectContaining({field:'longitude'}),
+      expect.objectContaining({field:'directions_url'}),
+    ]));
   });
 });

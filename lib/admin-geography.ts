@@ -1,4 +1,5 @@
 export type GeographyKind='country'|'pickup'|'destination';
+export type DestinationPublicationIssue={field:string;message:string};
 
 const text=(value:unknown)=>String(value??'').trim()||null;
 const number=(value:unknown)=>value===''||value==null?null:Number(value);
@@ -46,3 +47,22 @@ export function buildDestinationPayload(form:any){return{
  p_region_id:text(form.region_id),p_locality_id:text(form.locality_id),p_latitude:number(form.latitude),p_longitude:number(form.longitude),
  p_active:form.active!==false,
 }}
+
+export function validateDestinationPublication(form:any,country:{is_large?:boolean}={}):DestinationPublicationIssue[]{
+ const issues:DestinationPublicationIssue[]=[];
+ const required=(field:string,value:unknown,message:string)=>{if(!text(value))issues.push({field,message})};
+ required('country_id',form?.country_id,'Country is required');
+ if(country.is_large){required('region_id',form?.region_id,'Region is required');required('locality_id',form?.locality_id,'Town or city is required')}
+ required('name',form?.name,'Name is required');
+ required('destination_type',form?.destination_type,'Destination type is required');
+ required('description',form?.description,'Description is required');
+ required('picture_url',form?.picture_url,'Picture is required');
+ if(!text(form?.address1)&&!text(form?.town))issues.push({field:'address',message:'Address or town is required'});
+ const latitude=number(form?.latitude);if(latitude===null||!Number.isFinite(latitude)||latitude< -90||latitude>90)issues.push({field:'latitude',message:'Latitude must be between -90 and 90'});
+ const longitude=number(form?.longitude);if(longitude===null||!Number.isFinite(longitude)||longitude< -180||longitude>180)issues.push({field:'longitude',message:'Longitude must be between -180 and 180'});
+ try{if(!normalizeGoogleMapsUrl(form?.directions_url))throw new Error()}catch{issues.push({field:'directions_url',message:'A valid Google Maps link is required'})}
+ if(!['wet','dry'].includes(String(form?.wet_or_dry||'')))issues.push({field:'wet_or_dry',message:'Wet or dry arrival type is required'});
+ required('arrival_notes',form?.arrival_notes,'Arrival instructions are required');
+ if(!text(form?.email)&&!text(form?.phone))issues.push({field:'contact',message:'Contact email or telephone is required'});
+ return issues;
+}
