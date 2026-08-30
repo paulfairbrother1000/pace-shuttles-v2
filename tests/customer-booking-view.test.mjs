@@ -61,5 +61,11 @@ test('quick dates remain broad only for filters the customer has not selected',(
 test('route changes cannot search with an invalid stale date or vehicle type',()=>{
   const source=readFileSync('components/customer-booking.tsx','utf8');
   assert.match(source,/if\(vehicleType&&!types\.some\(type=>\(type\.id\|\|type\.name\)===vehicleType\)\)setVehicleType\(''\)/);
-  assert.match(source,/if\(country&&\(!day\|\|dates\.includes\(day\)\)\)void searchJourneys\(\)/);
+  assert.match(source,/if\(country&&\(!day\|\|\(datesRouteKey===routeKey&&dates\.includes\(day\)\)\)\)void searchJourneys\(\)/);
+});
+
+test('offered dates come from bookable search results rather than schedule rows alone',()=>{
+  const source=readFileSync('components/customer-booking.tsx','utf8');
+  assert.match(source,/setBookableDates\(availableJourneyDates\(visibleBookableJourneys\(rows\),\{\}\)\)/);
+  assert.match(source,/matchingJourneyDeps\.filter\(row=>dates\.includes\(row\.local_departure_date\)\)/);
 });
