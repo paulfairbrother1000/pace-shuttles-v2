@@ -66,6 +66,6 @@ test('route changes cannot search with an invalid stale date or vehicle type',()
 
 test('offered dates come from bookable search results rather than schedule rows alone',()=>{
   const source=readFileSync('components/customer-booking.tsx','utf8');
-  assert.match(source,/setBookableDates\(availableJourneyDates\(visibleBookableJourneys\(rows\),\{\}\)\)/);
+  assert.match(source,/setBookableDates\(current=>\{const next=availableJourneyDates\(visibleBookableJourneys\(rows\),\{\}\);return current\.join\('\|'\)===next\.join\('\|'\)\?current:next\}\)/);
   assert.match(source,/matchingJourneyDeps\.filter\(row=>dates\.includes\(row\.local_departure_date\)\)/);
 });
