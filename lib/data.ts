@@ -121,6 +121,7 @@ export const adminUpdateRoute=(a:any)=>rpc('v2_admin_update_route',a);
 export const adminUpdatePickup=(a:any)=>rpc('v2_admin_update_pickup',a);
 export const adminUpdateDestination=(a:any)=>rpc('v2_admin_update_destination',a);
 export const adminSaveCountry=(a:any)=>rpc('v2_admin_save_country',a);
+export const adminSetCountryCustomerAvailability=(countryId:string,paused:boolean,reason:string)=>rpc('v2_admin_set_country_customer_availability',{p_country_id:countryId,p_paused:paused,p_reason:reason});
 export const adminSavePickup=(a:any)=>rpc('v2_admin_save_pickup',a);
 export const adminSaveDestination=(a:any)=>rpc('v2_admin_save_destination',a);
 export const adminSetDestinationPublished=(destinationId:string,published:boolean)=>rpc('v2_admin_set_destination_published',{p_destination_id:destinationId,p_published:published});
