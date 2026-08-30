@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {availableCatalogue,visibleBookableJourneys,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
+import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
 
 test('catalogue exposes only geography backed by eligible public departures',()=>{
   const countries=[{id:'live-country'},{id:'empty-country'}];
@@ -38,4 +38,28 @@ test('changing one journey seat count does not change another journey',()=>{
 test('calendar UI disables dates with no eligible journey',()=>{
   const source=readFileSync('components/customer-booking.tsx','utf8');
   assert.match(source,/disabled=\{!hasJourneys\}/);
+});
+
+test('quick dates match the complete selected journey including pickup and type',()=>{
+  const departures=[
+    {country_id:'bvi',destination_id:'soggy',pickup_id:'a',local_departure_date:'2026-09-02',vehicle_types:[{id:'speedboat'}]},
+    {country_id:'bvi',destination_id:'soggy',pickup_id:'b',local_departure_date:'2026-09-04',vehicle_types:[{id:'speedboat'}]},
+    {country_id:'bvi',destination_id:'soggy',pickup_id:'a',local_departure_date:'2026-09-06',vehicle_types:[{id:'sailboat'}]},
+    {country_id:'bvi',destination_id:'cooper',pickup_id:'a',local_departure_date:'2026-09-08',vehicle_types:[{id:'speedboat'}]},
+  ];
+  assert.deepEqual(availableJourneyDates(departures,{countryId:'bvi',destinationId:'soggy',pickupId:'a',vehicleTypeId:'speedboat'}),['2026-09-02']);
+});
+
+test('quick dates remain broad only for filters the customer has not selected',()=>{
+  const departures=[
+    {country_id:'bvi',destination_id:'soggy',pickup_id:'a',local_departure_date:'2026-09-02',vehicle_types:[{id:'speedboat'}]},
+    {country_id:'bvi',destination_id:'cooper',pickup_id:'b',local_departure_date:'2026-09-04',vehicle_types:[{id:'sailboat'}]},
+  ];
+  assert.deepEqual(availableJourneyDates(departures,{countryId:'bvi'}),['2026-09-02','2026-09-04']);
+});
+
+test('route changes cannot search with an invalid stale date or vehicle type',()=>{
+  const source=readFileSync('components/customer-booking.tsx','utf8');
+  assert.match(source,/if\(vehicleType&&!types\.some\(type=>\(type\.id\|\|type\.name\)===vehicleType\)\)setVehicleType\(''\)/);
+  assert.match(source,/if\(country&&\(!day\|\|dates\.includes\(day\)\)\)void searchJourneys\(\)/);
 });
