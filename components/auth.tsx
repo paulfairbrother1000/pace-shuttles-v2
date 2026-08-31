@@ -37,7 +37,11 @@ export function AuthGate({children}:{children:ReactNode}){
    path.startsWith('/captain') ? !!access?.captain_ids?.length :
    path.startsWith('/customer') ? true : true;
 
- if(!allowed)return <AccessDenied path={path} access={access}/>;
+ if(!allowed)return <AccessDenied path={path} access={access} onSwitchAccount={async()=>{
+   const {error}=await s.auth.signOut();
+   if(error){setMsg(error.message);return;}
+   setSession(null);setAccess(null);setReady(true);
+ }}/>;
  return <>{children}</>;
 }
 
@@ -46,7 +50,7 @@ function Login({email,setEmail,password,setPassword,msg,setMsg,s}:any){
  async function magic(){if(!email){setMsg('Enter your email address first.');return;}setMsg('Sending secure sign-in link…');const {error}=await s.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.href}});setMsg(error?.message||'Check your email for the Pace Shuttles sign-in link.');}
  return <div className="login-wrap"><div className="card login-card"><div className="brand login-brand"><div className="brandmark">P</div><div><b>Pace</b><small>SHUTTLES</small></div></div><h1>Sign in</h1><p>Sign in to continue.</p><form onSubmit={passwordLogin}><label>Email</label><input type="email" value={email} onChange={(e:any)=>setEmail(e.target.value)} required/><label>Password</label><input type="password" value={password} onChange={(e:any)=>setPassword(e.target.value)}/><button className="btn" type="submit">Sign in</button><button className="btn secondary" type="button" onClick={magic}>Email me a secure sign-in link</button></form>{msg&&<div className="login-message">{msg}</div>}</div></div>
 }
-function AccessDenied({path,access}:{path:string;access:AccessContext|null}){
+function AccessDenied({path,access,onSwitchAccount}:{path:string;access:AccessContext|null;onSwitchAccount:()=>Promise<void>}){
  const destination=access?.is_site_admin?'/admin':access?.operator_ids?.length?'/operator':access?.captain_ids?.length?'/captain':'/customer';
- return <div className="login-wrap"><div className="card login-card"><div className="brand login-brand"><div className="brandmark">P</div><div><b>Pace</b><small>SHUTTLES</small></div></div><h1>Access not available</h1><p>Your Pace Shuttles account is signed in, but it is not authorised for <b>{path}</b>.</p><a className="btn" href={destination}>Go to my workspace</a><a className="btn secondary" href="/book">Find a journey</a></div></div>
+ return <div className="login-wrap"><div className="card login-card"><div className="brand login-brand"><div className="brandmark">P</div><div><b>Pace</b><small>SHUTTLES</small></div></div><h1>Access not available</h1><p>Your Pace Shuttles account is signed in, but it is not authorised for <b>{path}</b>.</p><button className="btn" type="button" onClick={onSwitchAccount}>Sign in with a different account</button><a className="btn secondary" href={destination}>Go to my workspace</a><a className="btn secondary" href="/book">Find a journey</a></div></div>
 }
