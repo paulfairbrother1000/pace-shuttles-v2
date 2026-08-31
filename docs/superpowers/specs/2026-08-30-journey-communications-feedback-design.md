@@ -341,4 +341,3 @@ Site Admin gains:
 - Anonymous feedback submission.
 - V1 database or application dependencies.
 - Changing the established allocation timing model beyond enforcing the mandatory captain prerequisite.
-
