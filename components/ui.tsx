@@ -12,6 +12,7 @@ const adminNav = [
   ['/admin/live-operations','Live Operations',Activity],
   ['/admin/journeys','Journeys',BookOpen],
   ['/admin/operators','Operators',Users],
+  ['/admin/applications','Applications',BookOpen],
   ['/admin/network','Routes & Network',MapPinned],
   ['/admin/analytics','Analytics',BarChart3],
   ['/admin/finance','Finance',WalletCards],

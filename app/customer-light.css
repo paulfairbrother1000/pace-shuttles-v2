@@ -230,6 +230,9 @@
 }
 .ps-customer-account .support-item.selected,
 .ps-customer-account .message.customer{background:#edf4ff!important}
+.ps-customer-account .journey-window.open{background:#edf9f2!important;color:#087440!important}
+.ps-customer-account .journey-window.scheduled{background:#fff7e8!important;color:#8a5600!important}
+.ps-customer-account .journey-window.closed{background:#f4f7fb!important;color:#52627c!important}
 .ps-customer-account .status{color:inherit}
 .ps-customer-account input,
 .ps-customer-account select,
