@@ -97,4 +97,3 @@ select p.id,p.country_id,p.name,p.town,p.region,p.picture_url,p.description,p.ar
 from pace_v2.pickup_points p join pace_v2.countries c on c.id=p.country_id
 where p.active and c.active and c.customer_availability_paused is not true
 and exists(select 1 from public.v2_public_departures dep where dep.pickup_id=p.id);
-

@@ -181,6 +181,18 @@ export const operatorRemoveUnavailability=(id:string)=>rpc('v2_operator_remove_u
 export const operatorSetRouteOfferActive=(id:string,active:boolean)=>rpc('v2_operator_set_route_offer_active',{p_offer_id:id,p_active:active});
 export async function loadCaptainManifest(){return select('v2_captain_my_manifest','scheduled_departure_ts',2000)}
 export async function loadCaptainMessages(){return select('v2_captain_my_messages','created_at',1000)}
+export async function loadCustomerJourneyConversations(){return select('v2_customer_my_journey_conversations','created_at',1000)}
+export async function loadCustomerJourneyMessages(){return select('v2_customer_my_journey_messages','created_at',2000)}
+export async function loadCustomerJourneyMessageWindows(){return rpc('v2_customer_my_journey_message_windows',{})}
+export async function loadCaptainJourneyConversations(){return select('v2_captain_my_journey_conversations','created_at',1000)}
+export async function loadCaptainJourneyMessages(){return select('v2_captain_my_journey_messages','created_at',2000)}
+export async function loadCaptainJourneyMessageWindows(){return select('v2_captain_my_journey_message_windows','messaging_opens_at',1000)}
+export const markJourneyConversationRead=(conversationId:string,audience:'customer'|'captain')=>rpc('v2_mark_journey_conversation_read',{p_conversation_id:conversationId,p_audience:audience});
+export async function loadAdminOperationalAlerts(){return select('v2_admin_operational_alerts','detected_at',1000)}
+export async function loadAdminJourneyConversations(){return select('v2_admin_journey_conversations','created_at',1000)}
+export async function loadAdminJourneyMessages(){return select('v2_admin_journey_messages','created_at',2000)}
+export async function loadAdminJourneyBroadcastDeliveries(){return select('v2_admin_journey_broadcast_deliveries','created_at',2000)}
+export const adminReplyJourneyConversation=(conversationId:string,message:string,category='operational')=>rpc('v2_site_admin_reply_journey_conversation',{p_conversation_id:conversationId,p_message_text:message,p_category:category});
 
 
 // Customer feedback/support, captain messaging, operator commercial controls
@@ -188,14 +200,43 @@ export async function loadCustomerFeedback(){return select('v2_customer_my_feedb
 export async function loadCustomerSupport(){return select('v2_customer_my_support','updated_at',250)}
 export async function loadCustomerSupportMessages(){return select('v2_customer_my_support_messages','created_at',1000)}
 export const customerSubmitFeedback=(bookingId:string,nps:number,rating:number,comment:string,attribution:string)=>rpc('v2_customer_submit_feedback',{p_booking_id:bookingId,p_nps:nps,p_operator_rating:rating,p_comment:comment,p_attribution:attribution});
+export type JourneyFeedbackInput={
+ bookingExperienceRating:number;nps:number;operatorRating:number;captainRating:number;
+ pickupRating:number;destinationRating:number;wentWell:string;couldImprove:string;
+ testimonialConsent:boolean;
+};
+export const customerSubmitJourneyFeedback=(bookingId:string,input:JourneyFeedbackInput)=>rpc('v2_customer_submit_feedback',{p_booking_id:bookingId,p_booking_experience_rating:input.bookingExperienceRating,p_nps:input.nps,p_operator_rating:input.operatorRating,p_captain_rating:input.captainRating,p_pickup_rating:input.pickupRating,p_destination_rating:input.destinationRating,p_went_well:input.wentWell,p_could_improve:input.couldImprove,p_testimonial_consent:input.testimonialConsent});
 export const customerOpenSupport=(bookingId:string,message:string,category:string)=>rpc('v2_customer_open_support',{p_booking_id:bookingId,p_message:message,p_category:category});
 export const customerReplySupport=(conversationId:string,message:string)=>rpc('v2_customer_reply_support',{p_conversation_id:conversationId,p_message:message});
-export const captainSendJourneyMessage=(allocationId:string,message:string,category:string)=>rpc('v2_captain_send_journey_message',{p_confirmed_allocation_id:allocationId,p_message:message,p_category:category});
+export const customerOpenCaptainConversation=(bookingId:string,message:string)=>rpc('v2_customer_open_captain_conversation',{p_booking_id:bookingId,p_message_text:message});
+export const customerSendCaptainMessage=(conversationId:string,message:string)=>rpc('v2_customer_send_captain_message',{p_conversation_id:conversationId,p_message_text:message});
+export const captainReplyToParty=(conversationId:string,message:string,category:string)=>rpc('v2_captain_reply_to_party',{p_conversation_id:conversationId,p_message_text:message,p_category:category});
+export const captainBroadcastToParties=async(allocationId:string,message:string,category:string,requestId?:string)=>{
+ if(!requestId?.trim())return {data:null,error:new Error('Broadcast request id is required')};
+ return rpc('v2_captain_broadcast_to_parties',{p_confirmed_allocation_id:allocationId,p_message_text:message,p_category:category,p_request_id:requestId});
+};
+const captainJourneyMessageRequests=new Map<string,string>();
+export const captainSendJourneyMessage=async(allocationId:string,message:string,category:string,requestId?:string)=>{
+ const draftKey=`${allocationId}:${category}:${message}`;
+ const stableRequestId=requestId||captainJourneyMessageRequests.get(draftKey)||crypto.randomUUID();
+ captainJourneyMessageRequests.set(draftKey,stableRequestId);
+ const result=await captainBroadcastToParties(allocationId,message,category,stableRequestId);
+ if(!result.error)captainJourneyMessageRequests.delete(draftKey);
+ return result;
+};
 export const operatorUpdateRouteOffer=(offerId:string,minSeats:number,maxSeats:number,minRevenueCents:number,preferred:boolean,threshold:number|null,discountEnabled:boolean,discountBps:number)=>rpc('v2_operator_update_route_offer',{p_offer_id:offerId,p_min_seats:minSeats,p_max_seats:maxSeats,p_min_revenue_cents:minRevenueCents,p_preferred:preferred,p_threshold:threshold,p_discount_enabled:discountEnabled,p_discount_bps:discountBps});
 
 // Production finance / refund / quality operations
 export async function loadAdminRefundOperations(){return select('v2_admin_refund_operations','requested_at',1000)}
 export async function loadAdminStripeReconciliation(){return select('v2_admin_stripe_reconciliation','received_at',1000)}
+export async function loadAdminQualityDashboard(){
+ const result=await rpc('v2_site_admin_quality_dashboard');
+ return {data:result.error?[]:[result.data],error:result.error};
+}
+export async function loadAdminRecentQualityPage(offset=0,limit=25){
+ const result=await rpc('v2_site_admin_quality_evidence_page',{p_offset:offset,p_limit:limit});
+ return {data:result.error?[]:[result.data],error:result.error};
+}
 export async function loadAdminQualityEvidence(){return select('v2_admin_quality_evidence','occurred_at',1000)}
 export async function loadAdminCustomerFeedback(){return select('v2_admin_customer_feedback','created_at',1000)}
 export const adminApproveRefund=(refundRequestId:string,approvedCents:number)=>rpc('v2_admin_approve_refund',{p_refund_request_id:refundRequestId,p_approved_refund_cents:approvedCents});

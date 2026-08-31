@@ -105,4 +105,3 @@ $$;
 
 revoke all on function public.v2_system_partner_shuttle_catalog(text) from public,anon,authenticated;
 grant execute on function public.v2_system_partner_shuttle_catalog(text) to service_role;
-

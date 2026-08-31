@@ -606,7 +606,7 @@ git commit -m "feat: add feedback and journey quality dashboards"
 - Consumes: all prior tasks.
 - Produces: verified release evidence and documented role workflows; no new production feature behavior.
 
-- [ ] **Step 1: Add the complete security matrix test**
+- [x] **Step 1: Add the complete security matrix test**
 
 Test actual authenticated identities/claims for:
 
@@ -623,7 +623,7 @@ service role: queue scheduling/claim/mark only through server execution
 
 Assert all new security-definer functions have PUBLIC and anon execution revoked and validate user/role internally.
 
-- [ ] **Step 2: Add deterministic end-to-end database scenario**
+- [x] **Step 2: Add deterministic end-to-end database scenario**
 
 In a transaction, construct a confirmed captain-backed journey with two paid bookings. Advance `p_as_of` through T-24, actual completion + four hours and next-day 10:00 local time. Assert reminder, private messages, broadcast fan-out, closure and feedback queue/scoring, then roll back.
 
@@ -637,9 +637,22 @@ git diff --check
 
 Run every `supabase/tests/*.sql` file against the linked non-production test context. Run Supabase advisors and inspect function grants, RLS policies and exposed views.
 
+Task 8 local evidence recorded on 2026-08-31:
+
+- [x] `node --test tests/journey-communications-release.test.mjs` — 3 passed, 0 failed.
+- [x] `npm test` — 117 Node tests and 65 Vitest tests passed.
+- [x] `npm run build` — optimized build completed and generated 24/24 static pages.
+- [x] `git diff --check` — no whitespace errors.
+- [x] `npm audit --omit=dev --offline --audit-level=high` — 0 vulnerabilities reported from the local lock/cache data.
+- [ ] `npm run lint` — the repository has no ESLint configuration and `next lint` opened the interactive setup prompt; no lint result is claimed.
+- [ ] Execute all 26 `supabase/tests/*.sql` files — no local `psql`, PostgreSQL, or Docker runtime is installed, and no remote database was contacted.
+- [ ] Supabase advisors/migration list/grant-RLS-view inspection — no local Supabase CLI/database context is installed; requires the approved non-production project.
+
 - [ ] **Step 4: Request independent code and security review**
 
 Review the complete diff against the approved spec, concentrating on message isolation, recipient derivation, timezones, idempotency, allocation locking, quality separation and service-role boundaries. Resolve all high/medium findings and rerun tests.
+
+Task 8 was explicitly limited to self-review with no subagent/reviewer delegation. The independent review gate therefore remains open.
 
 - [ ] **Step 5: Publish a preview deployment**
 
@@ -668,9 +681,22 @@ Present PR, migration list, test totals, preview URLs, role-by-role evidence, ro
 
 After approval, apply migrations in order, merge the PR, wait for production Vercel success, invoke a read-only scheduler dry run where supported, and verify live access gates plus one controlled non-delivery test fixture. Remove the fixture through its transactional cleanup and confirm zero residual rows.
 
-- [ ] **Step 9: Commit release documentation**
+- [x] **Step 9: Commit release documentation**
 
 ```bash
 git add supabase/tests/journey_communications_security_contract.sql supabase/tests/journey_communications_end_to_end.sql tests/journey-communications-release.test.mjs README_CAPTAIN_INTERFACE.md README_SERVICE_ACCESS.md docs/superpowers/plans/2026-08-30-journey-communications-feedback.md
 git commit -m "test: verify journey communications release"
 ```
+
+## Task 8 release gate matrix
+
+| Gate | Status | Required evidence/action |
+| --- | --- | --- |
+| Local Node/Vitest/build/static release contracts | Passed | Exact commands and outputs are recorded in the Task 8 report |
+| PostgreSQL fixtures, function ACLs, RLS/policies, exposed views | Open | Execute all 26 SQL files with `ON_ERROR_STOP` in the approved non-production database |
+| Supabase advisors and linked migration list | Open | Run against that same approved non-production context and resolve high/medium findings |
+| Independent code/security review | Open | Review complete Tasks 1-8 diff; no reviewer was authorized for this task |
+| Preview deploy/database migration | Approval gate | Push/open PR/deploy/apply only after controller approval |
+| Browser role journey, console, function logs, delivery records | Open | Browser daemon was already retry-capped locally; perform in preview with separate identities |
+| Production approval | Approval gate | Present PR, migrations, totals, preview URLs/evidence, rollback, and caveats |
+| Production migration/merge/deploy/live verification | Approval gate | Explicit activation approval required; current scheduler endpoint has no read-only dry-run mode |

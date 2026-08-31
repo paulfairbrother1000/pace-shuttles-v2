@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {existsSync,readFileSync} from 'node:fs';
+import {existsSync,readFileSync,readdirSync} from 'node:fs';
 import test from 'node:test';
 
 const migrationPath=new URL('../supabase/migrations/20260826250000_service_specific_vehicle_offers.sql',import.meta.url);
@@ -99,4 +99,81 @@ test('allocation eligibility matches offers to the requested scheduled service',
  assert.match(eligibility,/from pace_v2\.vehicle_availability_exceptions vae[\s\S]*vae\.vehicle_id\s*=\s*v\.id[\s\S]*vae\.start_ts\s*<[\s\S]*vae\.end_ts\s*>\s*d\.scheduled_departure_ts/i);
  assert.match(eligibility,/vro\.id as vehicle_route_offer_id/i);
  assert.match(eligibility,/c\.vehicle_route_offer_id/i);
+});
+
+test('allocation migration chain enforces a captain eligible for the allocated operator and vehicle type',()=>{
+ const migrationsDir=new URL('../supabase/migrations/',import.meta.url);
+ const foundationName=readdirSync(migrationsDir)
+  .find(name=>name.endsWith('_journey_communications_foundation.sql'));
+ assert.ok(foundationName,'journey communications foundation migration is missing');
+ const foundation=readFileSync(new URL(`../supabase/migrations/${foundationName}`,import.meta.url),'utf8');
+
+ assert.match(foundation,/create constraint trigger\s+confirmed_allocations_require_eligible_captain/i);
+ assert.match(foundation,/deferrable\s+initially deferred/i);
+ assert.match(foundation,/pace_v2\.captain_assignments/i);
+ assert.match(foundation,/pace_v2\.captains/i);
+ assert.match(foundation,/captain_vehicle_types/i);
+ assert.match(foundation,/c\.active/i);
+ assert.match(foundation,/c\.operator_id\s*=\s*v_operator_id/i);
+ assert.match(foundation,/cvt\.vehicle_type_id\s*=\s*v_vehicle_type_id/i);
+ assert.match(foundation,/raise exception 'confirmed allocation requires an active eligible assigned captain'/i);
+});
+
+test('captain eligibility is enforced over the confirmed allocation lifecycle',()=>{
+ const migrationsDir=new URL('../supabase/migrations/',import.meta.url);
+ const foundationName=readdirSync(migrationsDir).find(name=>name.endsWith('_journey_communications_foundation.sql'));
+ assert.ok(foundationName,'journey communications foundation migration is missing');
+ const foundation=readFileSync(new URL(`../supabase/migrations/${foundationName}`,import.meta.url),'utf8');
+
+ assert.match(foundation,/assert_confirmed_allocation_has_eligible_captain\(p_confirmed_allocation_id uuid\)/i);
+ assert.match(foundation,/v_status\s*<>\s*'confirmed'/i);
+ assert.match(foundation,/join pace_v2\.vehicles v on v\.id=ca\.vehicle_id/i);
+ assert.match(foundation,/v_vehicle_active/i);
+ assert.match(foundation,/join pace_v2\.departures d on d\.id=ca\.departure_id/i);
+ assert.match(foundation,/a\.active/i);
+ assert.doesNotMatch(foundation,/select %1\$I from pace_v2\.captain_assignments[\s\S]*limit 1/i);
+ for(const trigger of [
+  'captain_assignments_preserve_eligible_allocation_captain',
+  'captains_preserve_eligible_allocation_captain',
+  'captain_vehicle_types_preserve_eligible_allocation_captain'
+ ]) assert.match(foundation,new RegExp(`create constraint trigger\\s+${trigger}`,'i'));
+ assert.match(foundation,/old\.confirmed_allocation_id is distinct from new\.confirmed_allocation_id/i);
+});
+
+test('journey thread and broadcast delivery identities are relationally bound',()=>{
+ const migrationsDir=new URL('../supabase/migrations/',import.meta.url);
+ const foundationName=readdirSync(migrationsDir).find(name=>name.endsWith('_journey_communications_foundation.sql'));
+ assert.ok(foundationName,'journey communications foundation migration is missing');
+ const foundation=readFileSync(new URL(`../supabase/migrations/${foundationName}`,import.meta.url),'utf8');
+
+ assert.match(foundation,/validate_journey_conversation_identity\(\)/i);
+ assert.match(foundation,/ca\.consideration_id=ba\.vehicle_consideration_id/i);
+ assert.match(foundation,/ba\.booking_id=new\.booking_id[\s\S]*ca\.id=new\.confirmed_allocation_id/i);
+ assert.match(foundation,/journey_conversation_identity_is_immutable/i);
+ assert.match(foundation,/validate_journey_broadcast_delivery_identity\(\)/i);
+ assert.match(foundation,/target_conversation\.id=new\.conversation_id[\s\S]*m\.id=new\.broadcast_message_id[\s\S]*target_conversation\.booking_id=new\.booking_id/i);
+});
+
+test('captain reassignment, allocation identity, and window nulls remain safe',()=>{
+ const migrationsDir=new URL('../supabase/migrations/',import.meta.url);
+ const foundationName=readdirSync(migrationsDir).find(name=>name.endsWith('_journey_communications_foundation.sql'));
+ assert.ok(foundationName,'journey communications foundation migration is missing');
+ const foundation=readFileSync(new URL(`../supabase/migrations/${foundationName}`,import.meta.url),'utf8');
+
+ assert.match(foundation,/validate_captain_eligibility_change\(\)/i);
+ assert.match(foundation,/old\.captain_id is distinct from new\.captain_id/i);
+ assert.match(foundation,/old\.captain_id/i);
+ assert.match(foundation,/booking_allocations_preserve_journey_conversation_identity/i);
+ assert.match(foundation,/source_conversation\.confirmed_allocation_id=target_conversation\.confirmed_allocation_id/i);
+ assert.match(foundation,/coalesce\(p_as_of>=pace_v2\.journey_message_opens_at[\s\S]*false\)/i);
+ assert.match(foundation,/departures\.actual_arrival_ts required for journey completion window/i);
+});
+
+test('journey behavior fixture isolates the source allocation final captain support',()=>{
+ const behavior=readFileSync(new URL('../supabase/tests/journey_communications_foundation_behavior.sql',import.meta.url),'utf8');
+ assert.match(behavior,/select count\(distinct a2\.id\)[\s\S]*?\)=1/i);
+ assert.match(behavior,/select count\(\*\)[\s\S]*?\)=1/i);
+ assert.match(behavior,/a2\.id<>v_assignment_id/i);
+ assert.match(behavior,/fixture: source allocation with exactly one final eligible captain support required/i);
+ assert.match(behavior,/fixture: independently eligible destination allocation required/i);
 });
