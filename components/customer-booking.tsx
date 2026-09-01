@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { publicStorageImageUrl } from '@/lib/data';
-import { availableCatalogue, availableJourneyDates, defaultJourneyPartySizes, journeyBookingCardState, journeyCapacityMessages, journeySeatLimit, journeysMatchingSelection, journeysNeedingCapacityHydration, setJourneyPartySize, visibleBookableJourneys, visibleJourneyResults } from '@/lib/customer-booking-view';
+import { availableCatalogue, availableJourneyDates, defaultJourneyPartySizes, journeyBookingCardState, journeyCapacityMessages, journeyPricePromotion, journeySeatLimit, journeysMatchingSelection, journeysNeedingCapacityHydration, setJourneyPartySize, visibleBookableJourneys, visibleJourneyResults } from '@/lib/customer-booking-view';
 const money = (c: number) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -587,6 +587,7 @@ export default function CustomerBooking() {
                   cardState = journeyBookingCardState(q, pricingId === x.departure_id),
                   soldOut = cardState.soldOut,
                   unavailable = cardState.partyUnavailable,
+                  pricePromotion = journeyPricePromotion(q),
                   seatLimit = journeySeatLimit(q),
                   seatOptions = Array.from({ length: seatLimit }, (_, i) => i + 1);
                 return (
@@ -696,6 +697,7 @@ export default function CustomerBooking() {
                           </>
                         ) : offered ? (
                           <>
+                            {pricePromotion && <b className="ps-price-promotion">{pricePromotion}</b>}
                             <span>Per seat incl. tax & fees</span>
                             <strong>{money(q.all_in_unit_price_cents)}</strong>
                             <small>
