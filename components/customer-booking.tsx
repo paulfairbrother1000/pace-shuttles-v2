@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { publicStorageImageUrl } from '@/lib/data';
-import { availableCatalogue, availableJourneyDates, defaultJourneyPartySizes, journeyCapacityMessages, journeySeatLimit, journeysMatchingSelection, setJourneyPartySize, visibleBookableJourneys, visibleJourneyResults } from '@/lib/customer-booking-view';
+import { availableCatalogue, availableJourneyDates, defaultJourneyPartySizes, journeyBookingCardState, journeyCapacityMessages, journeySeatLimit, journeysMatchingSelection, journeysNeedingCapacityHydration, setJourneyPartySize, visibleBookableJourneys, visibleJourneyResults } from '@/lib/customer-booking-view';
 const money = (c: number) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -133,7 +133,7 @@ export default function CustomerBooking() {
   }
   async function hydrateLivePrices(rows: any[]) {
     if (!s || !rows.length) return;
-    const targets = rows.filter((x) => x.quote_status === 'check_price');
+    const targets = journeysNeedingCapacityHydration(rows);
     if (!targets.length) return;
     setResults((cur) => cur.map((x) => (targets.some((t) => t.departure_id === x.departure_id) ? { ...x, quote_status: 'loading_price' } : x)));
     for (let i = 0; i < targets.length; i += 4) {
@@ -584,7 +584,9 @@ export default function CustomerBooking() {
                   party = partyFor(x.departure_id),
                   loadingPrice = q.quote_status === 'check_price' || q.quote_status === 'loading_price',
                   offered = q.quote_status === 'offer',
-                  unavailable = q.quote_status === 'sold_out_for_party',
+                  cardState = journeyBookingCardState(q, pricingId === x.departure_id),
+                  soldOut = cardState.soldOut,
+                  unavailable = cardState.partyUnavailable,
                   seatLimit = journeySeatLimit(q),
                   seatOptions = Array.from({ length: seatLimit }, (_, i) => i + 1);
                 return (
@@ -675,18 +677,24 @@ export default function CustomerBooking() {
                       <div className="ps-price">
                         <label>
                           Seats{' '}
-                          <select aria-label={`Seats for ${x.pickup_name} to ${x.destination_name}`} value={party} disabled={pricingId === x.departure_id} onChange={(e) => void changeJourneyParty(x.departure_id, +e.target.value)}>
-                            {party > seatLimit && (
+                          <select aria-label={`Seats for ${x.pickup_name} to ${x.destination_name}`} value={soldOut ? 'sold_out' : party} disabled={cardState.selectorDisabled} onChange={(e) => void changeJourneyParty(x.departure_id, +e.target.value)}>
+                            {soldOut ? (
+                              <option value="sold_out">Sold out</option>
+                            ) : party > seatLimit ? (
                               <option value={party} disabled>
                                 {party}
                               </option>
-                            )}
-                            {seatOptions.map((n) => (
-                              <option key={n}>{n}</option>
-                            ))}
+                            ) : null}
+                            {!soldOut&&seatOptions.map((n) => <option key={n}>{n}</option>)}
                           </select>
                         </label>
-                        {offered ? (
+                        {soldOut ? (
+                          <>
+                            <span>Availability</span>
+                            <strong>Sold out</strong>
+                            <small>This popular journey is fully booked.</small>
+                          </>
+                        ) : offered ? (
                           <>
                             <span>Per seat incl. tax & fees</span>
                             <strong>{money(q.all_in_unit_price_cents)}</strong>
@@ -707,16 +715,20 @@ export default function CustomerBooking() {
                             <small>Calculating the best current price for your party.</small>
                           </>
                         )}
-                        {journeyCapacityMessages(q).map((message) => (
+                        {!soldOut&&journeyCapacityMessages(q).map((message) => (
                           <small className="ps-capacity-warning" key={message}>
                             {message}
                           </small>
                         ))}
                       </div>
                       <div className="ps-actions">
-                        {offered ? (
-                          <button className="ps-primary" disabled={pricingId === x.departure_id} onClick={() => choose(x.departure_id)}>
-                            {pricingId === x.departure_id ? 'Updating…' : 'Continue'}
+                        {soldOut ? (
+                          <button className="ps-primary" disabled>
+                            Sold out
+                          </button>
+                        ) : offered ? (
+                          <button className="ps-primary" disabled={cardState.actionDisabled} onClick={() => choose(x.departure_id)}>
+                            {cardState.actionLabel}
                           </button>
                         ) : unavailable ? (
                           <button className="ps-primary" disabled>

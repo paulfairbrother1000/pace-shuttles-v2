@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,visibleJourneyResults,journeySeatLimit,journeyCapacityMessages,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
+import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,visibleJourneyResults,journeysNeedingCapacityHydration,journeySeatLimit,journeyCapacityMessages,journeyBookingCardState,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
 
 test('catalogue exposes only geography backed by eligible public departures',()=>{
   const countries=[{id:'live-country'},{id:'empty-country'}];
@@ -14,7 +14,7 @@ test('catalogue exposes only geography backed by eligible public departures',()=
   assert.deepEqual(catalogue.pickups.map(x=>x.id),['live-pickup']);
 });
 
-test('shows only journeys that can still become or already are bookable',()=>{
+test('shows journeys that can be booked or displayed as sold out',()=>{
   const rows=[
     {departure_id:'offer',quote_status:'offer'},
     {departure_id:'checking',quote_status:'check_price'},
@@ -23,7 +23,7 @@ test('shows only journeys that can still become or already are bookable',()=>{
     {departure_id:'unavailable',quote_status:'unavailable'},
     {departure_id:'fairness',quote_status:'fairness_required'},
   ];
-  assert.deepEqual(visibleBookableJourneys(rows).map(row=>row.departure_id),['offer','checking','loading']);
+  assert.deepEqual(visibleBookableJourneys(rows).map(row=>row.departure_id),['offer','checking','loading','sold-out']);
 });
 
 test('each journey defaults independently to one seat',()=>{
@@ -41,7 +41,28 @@ test('a journey remains visible when the customer party no longer fits',()=>{
     {departure_id:'already-full',quote_status:'sold_out_for_party'},
     {departure_id:'other',quote_status:'offer'},
   ];
-  assert.deepEqual(visibleJourneyResults(rows,{selected:4,'already-full':1}).map(row=>row.departure_id),['selected','other']);
+  assert.deepEqual(visibleJourneyResults(rows,{selected:4,'already-full':1}).map(row=>row.departure_id),['selected','already-full','other']);
+});
+
+test('a genuinely sold-out journey disables booking while a smaller valid party remains selectable',()=>{
+  assert.deepEqual(
+    journeyBookingCardState({quote_status:'sold_out_for_party',remaining_seats_total:0,max_party_size:0},false),
+    {soldOut:true,partyUnavailable:false,selectorDisabled:true,actionDisabled:true,actionLabel:'Sold out'},
+  );
+  assert.deepEqual(
+    journeyBookingCardState({quote_status:'sold_out_for_party',remaining_seats_total:2,max_party_size:2},false),
+    {soldOut:false,partyUnavailable:true,selectorDisabled:false,actionDisabled:true,actionLabel:'Choose a smaller party'},
+  );
+});
+
+test('every journey missing authoritative capacity is hydrated before display',()=>{
+  const rows=[
+    {departure_id:'broad-search',quote_status:'check_price'},
+    {departure_id:'dated-offer',quote_status:'offer'},
+    {departure_id:'dated-sold-out',quote_status:'sold_out_for_party'},
+    {departure_id:'complete',quote_status:'offer',remaining_seats_total:4,max_party_size:4},
+  ];
+  assert.deepEqual(journeysNeedingCapacityHydration(rows).map(row=>row.departure_id),['broad-search','dated-offer','dated-sold-out']);
 });
 
 test('seat selector respects the live contiguous whole-party limit',()=>{
@@ -51,6 +72,7 @@ test('seat selector respects the live contiguous whole-party limit',()=>{
 });
 
 test('capacity urgency distinguishes total seats from contiguous party size',()=>{
+  assert.deepEqual(journeyCapacityMessages({remaining_seats_total:4,max_party_size:4}),['Only 4 seats remaining']);
   assert.deepEqual(journeyCapacityMessages({remaining_seats_total:3,max_party_size:2}),['Only 3 seats remaining','Maximum party size: 2']);
   assert.deepEqual(journeyCapacityMessages({remaining_seats_total:2,max_party_size:2}),['Only 2 seats remaining']);
   assert.deepEqual(journeyCapacityMessages({remaining_seats_total:15,max_party_size:12}),[]);
