@@ -16,6 +16,7 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
  const [selectedId,setSelectedId]=useState<string|null>(vehicles[0]?.vehicle_id||null);
  const [draft,setDraft]=useState<VehicleEditorDraft>(()=>vehicles[0]?vehicleToDraft(vehicles[0],offers):blankVehicleDraft());
  const [errors,setErrors]=useState<Record<string,string>>({});
+ const [saveNotice,setSaveNotice]=useState<{kind:'success'|'error';text:string}|null>(null);
  const [serviceId,setServiceId]=useState('');
 
  useEffect(()=>{
@@ -36,7 +37,15 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
  const serviceLabel=(route:RouteOption)=>`${route.route_name} — ${formatServiceSchedule(route.days_of_week,route.departure_time)}`;
  const addRoute=()=>{const route=routeOptions.find(r=>r.service_id===serviceId);if(!route)return;setDraft(current=>({...current,routeOffers:[...current.routeOffers,newRouteOffer(route,current.capacitySeats)]}));setServiceId('');};
  const cancel=()=>selectedVehicle?selectVehicle(selectedVehicle.vehicle_id):addVehicle();
- const save=async()=>{const nextErrors=validateVehicleDraft(draft);setErrors(nextErrors);if(Object.keys(nextErrors).length)return;const ok=await onSave(toVehicleSavePayload(draft));if(ok)setErrors({});};
+ const save=async()=>{
+  const nextErrors=validateVehicleDraft(draft);setErrors(nextErrors);
+  const errorCount=Object.keys(nextErrors).length;
+  if(errorCount){setSaveNotice({kind:'error',text:`Cannot save: complete the ${errorCount} highlighted required ${errorCount===1?'field':'fields'}.`});return;}
+  setSaveNotice(null);
+  const ok=await onSave(toVehicleSavePayload(draft));
+  if(ok){setErrors({});setSaveNotice({kind:'success',text:'Changes saved.'});}
+  else setSaveNotice({kind:'error',text:'Save failed. No changes were saved.'});
+ };
 
  return <section className="vehicle-workspace" aria-label="Fleet and vehicle editor">
   <aside className="fleet-rail">
@@ -63,7 +72,7 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
     {!draft.routeOffers.some(o=>!o.remove)&&<div className="empty-state">This vehicle is not attached to any routes yet.</div>}
    </div>
 
-   <footer className="vehicle-editor-actions"><div>{draft.vehicleId&&<><button className="link-danger" onClick={()=>update('active',!draft.active)}>{draft.active?'Deactivate vehicle':'Reactivate vehicle'}</button>{onBlockDates&&selectedVehicle&&<button className="btn secondary" onClick={()=>onBlockDates(selectedVehicle)}>Block dates</button>}</>}</div><div><button className="btn secondary" disabled={busy} onClick={cancel}>Cancel</button><button className="btn" disabled={busy} onClick={save}>{busy?'Saving…':'Save changes'}</button></div></footer>
+   <footer className="vehicle-editor-actions"><div>{draft.vehicleId&&<><button className="link-danger" onClick={()=>update('active',!draft.active)}>{draft.active?'Deactivate vehicle':'Reactivate vehicle'}</button>{onBlockDates&&selectedVehicle&&<button className="btn secondary" onClick={()=>onBlockDates(selectedVehicle)}>Block dates</button>}</>}</div><div>{saveNotice&&<p className={saveNotice.kind==='success'?'action-success':'action-error'} role={saveNotice.kind==='success'?'status':'alert'}>{saveNotice.text}</p>}<button className="btn secondary" disabled={busy} onClick={cancel}>Cancel</button><button className="btn" disabled={busy} onClick={save}>{busy?'Saving…':'Save changes'}</button></div></footer>
   </div>
  </section>;
 }

@@ -85,7 +85,7 @@ export function validateVehicleDraft(draft:VehicleEditorDraft):Record<string,str
   if(!Number.isInteger(min)||min<1)errors[`${prefix}.minSeats`]='Minimum seats must be at least 1.';
   if(!Number.isInteger(max)||max<min)errors[`${prefix}.maxSeats`]='Maximum seats must be at least the minimum.';
   else if(Number.isFinite(capacity)&&max>capacity)errors[`${prefix}.maxSeats`]=`Maximum seats cannot exceed vehicle capacity (${capacity}).`;
-  if(!Number.isFinite(revenue)||revenue<0)errors[`${prefix}.minRevenueUsd`]='Enter a valid minimum journey revenue.';
+  if(!offer.minRevenueUsd.trim()||!Number.isFinite(revenue)||revenue<0)errors[`${prefix}.minRevenueUsd`]='Enter a valid minimum journey revenue.';
   if(offer.discountEnabled&&(!offer.discountPercent.trim()||!Number.isFinite(discount)||discount<=0||discount>100))errors[`${prefix}.discountPercent`]='Discount must be greater than 0% and no more than 100%.';
   if(offer.belowMinimumMode==='custom_threshold'&&(!Number.isFinite(threshold)||threshold<=0||threshold>100))errors[`${prefix}.thresholdPercent`]='Threshold must be greater than 0% and no more than 100%.';
  });
