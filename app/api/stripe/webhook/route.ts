@@ -22,7 +22,7 @@ async function stripeRefund(paymentIntent:string){
   const body=new URLSearchParams();
   body.set('payment_intent',paymentIntent);
   body.set('reason','requested_by_customer');
-  const r=await fetch('https://api.stripe.com/v1/refunds',{method:'POST',headers:{Authorization:`Bearer ${secret}`,'Content-Type':'application/x-www-form-urlencoded'},body});
+  const r=await fetch('https://api.stripe.com/v1/refunds',{method:'POST',headers:{Authorization:`Bearer ${secret}`,'Content-Type':'application/x-www-form-urlencoded','Idempotency-Key':`pace-auto-refund-${paymentIntent}`},body});
   const j=await r.json();
   if(!r.ok)throw new Error(j?.error?.message||'Automatic Stripe refund failed');
   return j
@@ -81,6 +81,7 @@ export async function POST(req:Request){
     }
     return NextResponse.json({received:true})
   }catch(e:any){
+    console.error('Stripe webhook processing failed',{eventId:event?.id,eventType:event?.type,orderId,error:e?.message||String(e)});
     return new NextResponse(e?.message||'Webhook processing failed',{status:500})
   }
 }

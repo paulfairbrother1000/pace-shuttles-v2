@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
+import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,visibleJourneyResults,journeySeatLimit,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
 
 test('catalogue exposes only geography backed by eligible public departures',()=>{
   const countries=[{id:'live-country'},{id:'empty-country'}];
@@ -33,6 +33,28 @@ test('each journey defaults independently to one seat',()=>{
 test('changing one journey seat count does not change another journey',()=>{
   const current={a:1,b:1};
   assert.deepEqual(setJourneyPartySize(current,'b',3),{a:1,b:3});
+});
+
+test('a journey remains visible when the customer party no longer fits',()=>{
+  const rows=[
+    {departure_id:'selected',quote_status:'sold_out_for_party'},
+    {departure_id:'already-full',quote_status:'sold_out_for_party'},
+    {departure_id:'other',quote_status:'offer'},
+  ];
+  assert.deepEqual(visibleJourneyResults(rows,{selected:4,'already-full':1}).map(row=>row.departure_id),['selected','other']);
+});
+
+test('seat selector respects the live contiguous whole-party limit',()=>{
+  assert.equal(journeySeatLimit({max_party_size:2}),2);
+  assert.equal(journeySeatLimit({max_party_size:20}),12);
+  assert.equal(journeySeatLimit({max_party_size:0}),12);
+});
+
+test('booking card explains an unavailable party without suggesting another journey replaced it',()=>{
+  const source=readFileSync('components/customer-booking.tsx','utf8');
+  assert.match(source,/Only .* seats remain together/);
+  assert.match(source,/Choose a smaller party/);
+  assert.match(source,/journeySeatLimit\(q\)/);
 });
 
 test('calendar UI disables dates with no eligible journey',()=>{

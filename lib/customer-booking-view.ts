@@ -26,6 +26,15 @@ export const availableJourneyDates = (departures:any[],selection:JourneySelectio
 export const visibleBookableJourneys = <T extends {quote_status?: string | null}>(rows:T[]) =>
   rows.filter(row => ['offer','check_price','loading_price'].includes(row.quote_status || ''));
 
+export const visibleJourneyResults = <T extends {departure_id:string;quote_status?:string|null}>(rows:T[],partySizes:Record<string,number>) =>
+  rows.filter(row => ['offer','check_price','loading_price'].includes(row.quote_status || '') ||
+    (row.quote_status === 'sold_out_for_party' && Number(partySizes[row.departure_id] || 1) > 1));
+
+export const journeySeatLimit = (journey:{max_party_size?:unknown}) => {
+  const liveLimit=Number(journey.max_party_size || 0);
+  return liveLimit > 0 ? Math.min(12,Math.floor(liveLimit)) : 12;
+};
+
 export const defaultJourneyPartySizes = <T extends {departure_id:string}>(rows:T[]) =>
   Object.fromEntries(rows.map(row => [row.departure_id,1])) as Record<string,number>;
 
