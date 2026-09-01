@@ -60,4 +60,25 @@ describe('OperatorVehicleEditor',()=>{
   expect(onSave).toHaveBeenCalledOnce();
   expect(onSave.mock.calls[0][0]).toMatchObject({vehicle_id:'v1',preferred_captain_id:'c1',route_offers:[{service_id:'saturday',route_id:'r1',preferred_captain_id:'c2',post_min_discount_bps:1500,below_minimum_operation_mode:'custom_threshold',min_value_threshold_ratio:.8}]});
  });
+
+ it('reports blocked validation beside Save without calling the database',async()=>{
+  const onSave=setup();const user=userEvent.setup();
+  await user.selectOptions(screen.getByLabelText('Eligible route'),'tuesday');
+  await user.click(screen.getByRole('button',{name:'+ Add route'}));
+  await user.click(screen.getByRole('button',{name:'Save changes'}));
+  expect(onSave).not.toHaveBeenCalled();
+  expect(screen.getByRole('alert').textContent).toBe('Cannot save: complete the 2 highlighted required fields.');
+ });
+
+ it('confirms successful save beside the Save button',async()=>{
+  setup();const user=userEvent.setup();
+  await user.click(screen.getByRole('button',{name:'Save changes'}));
+  expect(screen.getByRole('status').textContent).toBe('Changes saved.');
+ });
+
+ it('reports a failed save beside the Save button',async()=>{
+  setup(vi.fn(async()=>false));const user=userEvent.setup();
+  await user.click(screen.getByRole('button',{name:'Save changes'}));
+  expect(screen.getByRole('alert').textContent).toBe('Save failed. No changes were saved.');
+ });
 });
