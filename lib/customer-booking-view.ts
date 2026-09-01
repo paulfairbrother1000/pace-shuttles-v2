@@ -24,11 +24,30 @@ export const availableJourneyDates = (departures:any[],selection:JourneySelectio
 )).sort() as string[];
 
 export const visibleBookableJourneys = <T extends {quote_status?: string | null}>(rows:T[]) =>
-  rows.filter(row => ['offer','check_price','loading_price'].includes(row.quote_status || ''));
+  rows.filter(row => ['offer','check_price','loading_price','sold_out_for_party'].includes(row.quote_status || ''));
 
 export const visibleJourneyResults = <T extends {departure_id:string;quote_status?:string|null}>(rows:T[],partySizes:Record<string,number>) =>
-  rows.filter(row => ['offer','check_price','loading_price'].includes(row.quote_status || '') ||
-    (row.quote_status === 'sold_out_for_party' && Number(partySizes[row.departure_id] || 1) > 1));
+  rows.filter(row => ['offer','check_price','loading_price','sold_out_for_party'].includes(row.quote_status || ''));
+
+export const journeysNeedingCapacityHydration = <T extends {quote_status?:unknown;remaining_seats_total?:unknown;max_party_size?:unknown}>(rows:T[]) =>
+  rows.filter(row => row.quote_status==='check_price'||row.remaining_seats_total==null||row.max_party_size==null);
+
+export const journeyBookingCardState = (
+  journey:{quote_status?:unknown;remaining_seats_total?:unknown},
+  pricing:boolean,
+) => {
+  const quoteStatus=String(journey.quote_status || '');
+  const remaining=Math.max(0,Math.floor(Number(journey.remaining_seats_total || 0)));
+  const soldOut=quoteStatus==='sold_out_for_party'&&remaining===0;
+  const partyUnavailable=quoteStatus==='sold_out_for_party'&&!soldOut;
+  return {
+    soldOut,
+    partyUnavailable,
+    selectorDisabled:soldOut||pricing,
+    actionDisabled:soldOut||partyUnavailable||pricing||quoteStatus!=='offer',
+    actionLabel:soldOut?'Sold out':partyUnavailable?'Choose a smaller party':pricing?'Updating…':quoteStatus==='offer'?'Continue':'Checking price…',
+  };
+};
 
 export const journeySeatLimit = (journey:{max_party_size?:unknown}) => {
   const liveLimit=Number(journey.max_party_size || 0);
@@ -39,8 +58,8 @@ export const journeyCapacityMessages = (journey:{remaining_seats_total?:unknown;
   const total=Math.max(0,Math.floor(Number(journey.remaining_seats_total || 0)));
   const party=Math.max(0,Math.floor(Number(journey.max_party_size || 0)));
   const messages:string[]=[];
-  if(total>0&&total<=3)messages.push(`Only ${total} seat${total===1?'':'s'} remaining`);
-  if(total>0&&total<=3&&total>party&&party>0)messages.push(`Maximum party size: ${party}`);
+  if(total>0&&total<=4)messages.push(`Only ${total} seat${total===1?'':'s'} remaining`);
+  if(total>0&&total<=4&&total>party&&party>0)messages.push(`Maximum party size: ${party}`);
   return messages;
 };
 
