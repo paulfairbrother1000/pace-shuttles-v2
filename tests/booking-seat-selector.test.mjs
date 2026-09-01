@@ -9,6 +9,6 @@ test('book page uses only the native journey seat selector',()=>{
 
 test('native journey selector remains responsible for quote party size',()=>{
   const booking=fs.readFileSync(new URL('../components/customer-booking.tsx',import.meta.url),'utf8');
-  assert.match(booking,/p_party_size:partyFor\(id\)/);
-  assert.match(booking,/changeJourneyParty\(x\.departure_id,\+e\.target\.value\)/);
+  assert.match(booking,/p_party_size:\s*partyFor\(id\)/);
+  assert.match(booking,/changeJourneyParty\(x\.departure_id,\s*\+e\.target\.value\)/);
 });

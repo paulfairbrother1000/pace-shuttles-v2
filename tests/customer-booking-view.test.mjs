@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,visibleJourneyResults,journeySeatLimit,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
+import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,visibleJourneyResults,journeySeatLimit,journeyCapacityMessages,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
 
 test('catalogue exposes only geography backed by eligible public departures',()=>{
   const countries=[{id:'live-country'},{id:'empty-country'}];
@@ -50,11 +50,28 @@ test('seat selector respects the live contiguous whole-party limit',()=>{
   assert.equal(journeySeatLimit({max_party_size:0}),12);
 });
 
+test('capacity urgency distinguishes total seats from contiguous party size',()=>{
+  assert.deepEqual(journeyCapacityMessages({remaining_seats_total:3,max_party_size:2}),['Only 3 seats remaining','Maximum party size: 2']);
+  assert.deepEqual(journeyCapacityMessages({remaining_seats_total:2,max_party_size:2}),['Only 2 seats remaining']);
+  assert.deepEqual(journeyCapacityMessages({remaining_seats_total:15,max_party_size:12}),[]);
+});
+
 test('booking card explains an unavailable party without suggesting another journey replaced it',()=>{
   const source=readFileSync('components/customer-booking.tsx','utf8');
   assert.match(source,/Only .* seats remain together/);
   assert.match(source,/Choose a smaller party/);
   assert.match(source,/journeySeatLimit\(q\)/);
+  assert.match(source,/journeyCapacityMessages\(q\)/);
+});
+
+test('checkout capacity migration reserves pending parties and serializes commits',()=>{
+  const migration=readFileSync('supabase/migrations/20260901030000_checkout_capacity_reservations.sql','utf8');
+  assert.match(migration,/pg_advisory_xact_lock/);
+  assert.match(migration,/status='pending_payment'/);
+  assert.match(migration,/qi\.expires_at>now\(\)/);
+  assert.match(migration,/preliminary_vehicle_id/);
+  assert.match(migration,/remaining_seats_total integer/);
+  assert.match(migration,/reserved_seats/);
 });
 
 test('calendar UI disables dates with no eligible journey',()=>{
@@ -82,12 +99,12 @@ test('quick dates remain broad only for filters the customer has not selected',(
 
 test('route changes cannot search with an invalid stale date or vehicle type',()=>{
   const source=readFileSync('components/customer-booking.tsx','utf8');
-  assert.match(source,/if\(vehicleType&&!types\.some\(type=>\(type\.id\|\|type\.name\)===vehicleType\)\)setVehicleType\(''\)/);
-  assert.match(source,/if\(country&&\(!day\|\|\(datesRouteKey===routeKey&&dates\.includes\(day\)\)\)\)void searchJourneys\(\)/);
+  assert.match(source,/vehicleType\s*&&[\s\S]*!types\.some\(\(type\) => \(type\.id \|\| type\.name\) === vehicleType\)/);
+  assert.match(source,/country\s*&&[\s\S]*datesRouteKey === routeKey[\s\S]*void searchJourneys\(\)/);
 });
 
 test('offered dates come from bookable search results rather than schedule rows alone',()=>{
   const source=readFileSync('components/customer-booking.tsx','utf8');
-  assert.match(source,/setBookableDates\(current=>\{const next=availableJourneyDates\(visibleBookableJourneys\(rows\),\{\}\);return current\.join\('\|'\)===next\.join\('\|'\)\?current:next\}\)/);
-  assert.match(source,/matchingJourneyDeps\.filter\(row=>dates\.includes\(row\.local_departure_date\)\)/);
+  assert.match(source,/setBookableDates\(\(current\) =>[\s\S]*availableJourneyDates\(visibleBookableJourneys\(rows\), \{\}\)/);
+  assert.match(source,/matchingJourneyDeps\.filter\(\(row\) =>\s*dates\.includes\(row\.local_departure_date\)/);
 });

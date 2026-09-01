@@ -53,6 +53,6 @@ test('migration protects transport type management and in-use operator assignmen
 test('customer type tiles retain the table-provided image', async () => {
   const booking = await readFile(new URL('../components/customer-booking.tsx', import.meta.url), 'utf8');
   assert.match(booking, /<Photo src=\{t\.picture_url\} alt=\{t\.name\}/);
-  assert.match(booking, /className=\{`ps-type-card\$\{vehicleType===t\.id\?' selected':''\}`\}/);
-  assert.match(booking, /onClick=\{\(\)=>setVehicleType\(vehicleType===t\.id\?'':t\.id\)\}/);
+  assert.match(booking, /className=\{`ps-type-card\$\{vehicleType\s*===\s*t\.id\s*\?\s*' selected'\s*:\s*''\}`\}/);
+  assert.match(booking, /onClick=\{\(\)\s*=>\s*setVehicleType\(vehicleType\s*===\s*t\.id\s*\?\s*''\s*:\s*t\.id\)\}/);
 });
