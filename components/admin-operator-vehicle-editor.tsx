@@ -39,10 +39,10 @@ export function AdminOperatorVehicleEditor({operatorId}:{operatorId:string}){
   const expectedOperatorId=operatorId;
   setBusy(true);setMessage('');
   const result=await operatorSaveVehicle({...payload,operator_id:expectedOperatorId});
-  if(operatorIdRef.current!==expectedOperatorId)return false;
+  if(operatorIdRef.current!==expectedOperatorId)return {ok:false,error:'The selected operator changed. Please try again.'};
   setBusy(false);
-  if(result.error){setMessage(result.error.message||String(result.error));return false;}
-  setMessage('Vehicle saved');await reload(expectedOperatorId);return true;
+  if(result.error){const error=result.error.message||String(result.error);setMessage(error);return {ok:false,error};}
+  setMessage('Vehicle saved');await reload(expectedOperatorId);return {ok:true};
  };
 
  return <>

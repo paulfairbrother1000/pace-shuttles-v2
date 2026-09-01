@@ -7,7 +7,7 @@ import {
 
 type Props={
  vehicles:VehicleEditorRow[]; offers:RouteOfferRow[]; captains:CaptainOption[]; routes:RouteOption[]; vehicleTypes:VehicleTypeOption[];
- busy:boolean; onSave:(payload:Record<string,unknown>)=>Promise<boolean>; onBlockDates?:(vehicle:VehicleEditorRow)=>void;
+ busy:boolean; onSave:(payload:Record<string,unknown>)=>Promise<{ok:boolean;error?:string}>; onBlockDates?:(vehicle:VehicleEditorRow)=>void;
 };
 
 const fieldError=(errors:Record<string,string>,name:string)=>errors[name]?<small className="field-error">{errors[name]}</small>:null;
@@ -42,9 +42,9 @@ export function OperatorVehicleEditor({vehicles,offers,captains,routes,vehicleTy
   const errorCount=Object.keys(nextErrors).length;
   if(errorCount){setSaveNotice({kind:'error',text:`Cannot save: complete the ${errorCount} highlighted required ${errorCount===1?'field':'fields'}.`});return;}
   setSaveNotice(null);
-  const ok=await onSave(toVehicleSavePayload(draft));
-  if(ok){setErrors({});setSaveNotice({kind:'success',text:'Changes saved.'});}
-  else setSaveNotice({kind:'error',text:'Save failed. No changes were saved.'});
+  const result=await onSave(toVehicleSavePayload(draft));
+  if(result.ok){setErrors({});setSaveNotice({kind:'success',text:'Changes saved.'});}
+  else setSaveNotice({kind:'error',text:result.error?`Save failed: ${result.error}`:'Save failed. No changes were saved.'});
  };
 
  return <section className="vehicle-workspace" aria-label="Fleet and vehicle editor">

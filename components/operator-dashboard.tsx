@@ -173,8 +173,8 @@ function FleetEditor({vehicles,offers,captains,routes,vehicleTypes,busy,setBusy,
   setBusy('Vehicle save');setMsg('');
   const result=await operatorSaveVehicle(payload);
   setBusy('');
-  if(result.error){setMsg(result.error.message||String(result.error));return false;}
-  setMsg('Vehicle saved');await refresh();return true;
+  if(result.error){const error=result.error.message||String(result.error);setMsg(error);return {ok:false,error};}
+  setMsg('Vehicle saved');await refresh();return {ok:true};
  };
  const block=(v:any)=>{const start=window.prompt('Unavailable from (YYYY-MM-DD HH:MM)');if(!start)return;const end=window.prompt('Unavailable until (YYYY-MM-DD HH:MM)');if(!end)return;const note=window.prompt('Reason / note','Maintenance')||'Unavailable';setBusy('Vehicle unavailability');void operatorAddUnavailability(v.vehicle_id||v.id,new Date(start).toISOString(),new Date(end).toISOString(),'operator_unavailable',note).then(async result=>{setBusy('');if(result.error)setMsg(result.error.message);else{setMsg('Vehicle unavailability completed');await refresh()}})};
  return <OperatorVehicleEditor vehicles={vehicles} offers={offers} captains={captains} routes={routes} vehicleTypes={vehicleTypes} busy={!!busy} onSave={save} onBlockDates={block}/>;
