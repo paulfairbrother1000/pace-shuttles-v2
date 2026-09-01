@@ -17,7 +17,7 @@ const routes=[
 const vehicleTypes=[{operator_id:'o1',vehicle_type_id:'boat',vehicle_type_name:'Speed Boat'},{operator_id:'o1',vehicle_type_id:'taxi',vehicle_type_name:'Taxi'}];
 afterEach(cleanup);
 
-const setup=(onSave=vi.fn(async(_payload:Record<string,unknown>)=>true))=>{render(<OperatorVehicleEditor vehicles={vehicles} offers={offers} captains={captains} routes={routes} vehicleTypes={vehicleTypes} busy={false} onSave={onSave}/>);return onSave};
+const setup=(onSave=vi.fn(async(_payload:Record<string,unknown>)=>({ok:true})))=>{render(<OperatorVehicleEditor vehicles={vehicles} offers={offers} captains={captains} routes={routes} vehicleTypes={vehicleTypes} busy={false} onSave={onSave}/>);return onSave};
 
 describe('OperatorVehicleEditor',()=>{
  it('shows the full selected vehicle and offer',()=>{
@@ -76,9 +76,9 @@ describe('OperatorVehicleEditor',()=>{
   expect(screen.getByRole('status').textContent).toBe('Changes saved.');
  });
 
- it('reports a failed save beside the Save button',async()=>{
-  setup(vi.fn(async()=>false));const user=userEvent.setup();
+ it('reports the exact database failure beside the Save button',async()=>{
+  setup(vi.fn(async()=>({ok:false,error:'operator access required'})));const user=userEvent.setup();
   await user.click(screen.getByRole('button',{name:'Save changes'}));
-  expect(screen.getByRole('alert').textContent).toBe('Save failed. No changes were saved.');
+  expect(screen.getByRole('alert').textContent).toBe('Save failed: operator access required');
  });
 });
