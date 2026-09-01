@@ -2,6 +2,7 @@
 import { FormEvent, ReactNode, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
+import { CHECKOUT_OTP_LENGTH, isCheckoutOtpComplete, normalizeCheckoutOtp } from '@/lib/checkout-otp';
 
 const PUBLIC=['/','/book','/checkout'];
 type AccessContext={user_id:string|null;platform_role:string;is_site_admin:boolean;operator_ids:string[];operator_roles:string[];captain_ids:string[]};
@@ -46,9 +47,25 @@ export function AuthGate({children}:{children:ReactNode}){
 }
 
 function Login({email,setEmail,password,setPassword,msg,setMsg,s}:any){
+ const [otp,setOtp]=useState(''),[otpSent,setOtpSent]=useState(false),[busy,setBusy]=useState(false);
  async function passwordLogin(e:FormEvent){e.preventDefault();setMsg('Signing in…');const {error}=await s.auth.signInWithPassword({email,password});setMsg(error?.message||'Signed in');}
- async function magic(){if(!email){setMsg('Enter your email address first.');return;}setMsg('Sending secure sign-in link…');const {error}=await s.auth.signInWithOtp({email,options:{emailRedirectTo:window.location.href}});setMsg(error?.message||'Check your email for the Pace Shuttles sign-in link.');}
- return <div className="login-wrap"><div className="card login-card"><div className="brand login-brand"><div className="brandmark">P</div><div><b>Pace</b><small>SHUTTLES</small></div></div><h1>Sign in</h1><p>Sign in to continue.</p><form onSubmit={passwordLogin}><label>Email</label><input type="email" value={email} onChange={(e:any)=>setEmail(e.target.value)} required/><label>Password</label><input type="password" value={password} onChange={(e:any)=>setPassword(e.target.value)}/><button className="btn" type="submit">Sign in</button><button className="btn secondary" type="button" onClick={magic}>Email me a secure sign-in link</button></form>{msg&&<div className="login-message">{msg}</div>}</div></div>
+ async function sendOtp(){
+   if(!email){setMsg('Enter your email address first.');return;}
+   setBusy(true);setMsg('Sending your verification code…');
+   const {error}=await s.auth.signInWithOtp({email:email.trim(),options:{shouldCreateUser:false}});
+   setBusy(false);
+   if(error){setMsg(error.message);return;}
+   setOtpSent(true);setMsg(`Enter the ${CHECKOUT_OTP_LENGTH}-digit code from your email.`);
+ }
+ async function verifyOtp(){
+   if(!isCheckoutOtpComplete(otp))return;
+   setBusy(true);setMsg('Checking your code…');
+   const {error}=await s.auth.verifyOtp({email:email.trim(),token:normalizeCheckoutOtp(otp),type:'email'});
+   setBusy(false);
+   if(error){setMsg(error.message);return;}
+   setMsg('Signed in');setOtp('');
+ }
+ return <div className="login-wrap"><div className="card login-card"><div className="brand login-brand"><div className="brandmark">P</div><div><b>Pace</b><small>SHUTTLES</small></div></div><h1>Sign in</h1><p>Sign in to continue.</p><form onSubmit={passwordLogin}><label htmlFor="pace-login-email">Email</label><input id="pace-login-email" autoComplete="email" type="email" value={email} onChange={(e:any)=>setEmail(e.target.value)} required/><label htmlFor="pace-login-password">Password</label><input id="pace-login-password" autoComplete="current-password" type="password" value={password} onChange={(e:any)=>setPassword(e.target.value)}/><button className="btn" type="submit">Sign in</button><button className="btn secondary" type="button" disabled={busy} onClick={sendOtp}>{busy?'Sending…':'Email me a verification code'}</button>{otpSent&&<><label htmlFor="pace-login-code">Verification code</label><input id="pace-login-code" inputMode="numeric" autoComplete="one-time-code" maxLength={CHECKOUT_OTP_LENGTH} placeholder={`${CHECKOUT_OTP_LENGTH}-digit code`} value={otp} onChange={(e:any)=>setOtp(normalizeCheckoutOtp(e.target.value))}/><button className="btn" type="button" disabled={busy||!isCheckoutOtpComplete(otp)} onClick={verifyOtp}>Verify and sign in</button><button className="btn secondary" type="button" disabled={busy} onClick={sendOtp}>Resend code</button></>}</form>{msg&&<div className="login-message">{msg}</div>}</div></div>
 }
 function AccessDenied({path,access,onSwitchAccount}:{path:string;access:AccessContext|null;onSwitchAccount:()=>Promise<void>}){
  const destination=access?.is_site_admin?'/admin':access?.operator_ids?.length?'/operator':access?.captain_ids?.length?'/captain':'/customer';
