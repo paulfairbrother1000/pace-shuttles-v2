@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,visibleJourneyResults,journeysNeedingCapacityHydration,journeySeatLimit,journeyCapacityMessages,journeyBookingCardState,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
+import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,visibleJourneyResults,journeysNeedingCapacityHydration,journeySeatLimit,journeyCapacityMessages,journeyBookingCardState,journeyPricePromotion,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
 
 test('catalogue exposes only geography backed by eligible public departures',()=>{
   const countries=[{id:'live-country'},{id:'empty-country'}];
@@ -76,6 +76,13 @@ test('capacity urgency distinguishes total seats from contiguous party size',()=
   assert.deepEqual(journeyCapacityMessages({remaining_seats_total:3,max_party_size:2}),['Only 3 seats remaining','Maximum party size: 2']);
   assert.deepEqual(journeyCapacityMessages({remaining_seats_total:2,max_party_size:2}),['Only 2 seats remaining']);
   assert.deepEqual(journeyCapacityMessages({remaining_seats_total:15,max_party_size:12}),[]);
+});
+
+test('price promotion labels only live discounted offers as REDUCED',()=>{
+  assert.equal(journeyPricePromotion({quote_status:'offer',discount_applied:true}),'REDUCED');
+  assert.equal(journeyPricePromotion({quote_status:'offer',discount_applied:false}),null);
+  assert.equal(journeyPricePromotion({quote_status:'loading_price',discount_applied:true}),null);
+  assert.equal(journeyPricePromotion({quote_status:'sold_out_for_party',discount_applied:true}),null);
 });
 
 test('booking card explains an unavailable party without suggesting another journey replaced it',()=>{

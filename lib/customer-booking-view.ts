@@ -63,6 +63,9 @@ export const journeyCapacityMessages = (journey:{remaining_seats_total?:unknown;
   return messages;
 };
 
+export const journeyPricePromotion = (journey:{quote_status?:unknown;discount_applied?:unknown}) =>
+  journey.quote_status==='offer'&&journey.discount_applied===true?'REDUCED':null;
+
 export const defaultJourneyPartySizes = <T extends {departure_id:string}>(rows:T[]) =>
   Object.fromEntries(rows.map(row => [row.departure_id,1])) as Record<string,number>;
 
