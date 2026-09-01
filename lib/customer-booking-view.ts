@@ -35,6 +35,15 @@ export const journeySeatLimit = (journey:{max_party_size?:unknown}) => {
   return liveLimit > 0 ? Math.min(12,Math.floor(liveLimit)) : 12;
 };
 
+export const journeyCapacityMessages = (journey:{remaining_seats_total?:unknown;max_party_size?:unknown}) => {
+  const total=Math.max(0,Math.floor(Number(journey.remaining_seats_total || 0)));
+  const party=Math.max(0,Math.floor(Number(journey.max_party_size || 0)));
+  const messages:string[]=[];
+  if(total>0&&total<=3)messages.push(`Only ${total} seat${total===1?'':'s'} remaining`);
+  if(total>0&&total<=3&&total>party&&party>0)messages.push(`Maximum party size: ${party}`);
+  return messages;
+};
+
 export const defaultJourneyPartySizes = <T extends {departure_id:string}>(rows:T[]) =>
   Object.fromEntries(rows.map(row => [row.departure_id,1])) as Record<string,number>;
 
