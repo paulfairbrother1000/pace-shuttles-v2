@@ -28,7 +28,7 @@ describe('customer location presentation',()=>{
     expect(screen.getByRole('dialog',{name:'Boom information'})).toBeTruthy();
     expect(screen.getByRole('img',{name:'Boom'})).toBeTruthy();
     const map=screen.getByTitle('Map of Boom');
-    expect(map.getAttribute('src')).toBe('https://www.google.com/maps?q=17.014%2C-61.765&z=15&output=embed');
+    expect(map.getAttribute('src')).toBe('https://www.google.com/maps?q=17.014%2C-61.765&z=18&output=embed');
     expect(map.getAttribute('loading')).toBe('lazy');
     expect(screen.getByRole('link',{name:'Get directions'}).getAttribute('href')).toBe('https://maps.google.com/maps/dir/?api=1&destination=Boom');
     expect(screen.queryByText('Open in Google Maps')).toBeNull();
