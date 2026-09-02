@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,visibleJourneyResults,journeysNeedingCapacityHydration,journeySeatLimit,journeyCapacityMessages,journeyBookingCardState,journeyPricePromotion,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
+import {availableCatalogue,availableJourneyDates,visibleBookableJourneys,visibleJourneyResults,journeysNeedingCapacityHydration,journeySeatLimit,journeyCapacityMessages,journeyBookingCardState,journeyPricePromotion,googleMapsEmbedUrl,defaultJourneyPartySizes,setJourneyPartySize} from '../lib/customer-booking-view.ts';
 
 test('catalogue exposes only geography backed by eligible public departures',()=>{
   const countries=[{id:'live-country'},{id:'empty-country'}];
@@ -83,6 +83,15 @@ test('price promotion labels only live discounted offers as REDUCED',()=>{
   assert.equal(journeyPricePromotion({quote_status:'offer',discount_applied:false}),null);
   assert.equal(journeyPricePromotion({quote_status:'loading_price',discount_applied:true}),null);
   assert.equal(journeyPricePromotion({quote_status:'sold_out_for_party',discount_applied:true}),null);
+});
+
+test('map embeds use only valid location coordinates',()=>{
+  assert.equal(googleMapsEmbedUrl({latitude:17.074,longitude:-61.887}),'https://www.google.com/maps?q=17.074%2C-61.887&z=15&output=embed');
+  assert.equal(googleMapsEmbedUrl({latitude:'17.074',longitude:'-61.887'}),'https://www.google.com/maps?q=17.074%2C-61.887&z=15&output=embed');
+  assert.equal(googleMapsEmbedUrl({latitude:null,longitude:-61.887}),null);
+  assert.equal(googleMapsEmbedUrl({latitude:'not-a-number',longitude:-61.887}),null);
+  assert.equal(googleMapsEmbedUrl({latitude:91,longitude:-61.887}),null);
+  assert.equal(googleMapsEmbedUrl({latitude:17.074,longitude:-181}),null);
 });
 
 test('booking card explains an unavailable party without suggesting another journey replaced it',()=>{

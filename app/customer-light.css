@@ -108,6 +108,41 @@
 .ps-catalog-empty b{color:#0d1f44!important}
 .ps-catalog-empty p{color:#66738d!important}
 
+/* Customer location imagery and details */
+.ps-route-images button span{
+  left:10px!important;right:auto!important;bottom:10px!important;display:block!important;
+  max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  opacity:1!important;padding:7px 10px!important;background:rgba(7,20,44,.82)!important;
+  color:#fff!important;font-size:12px!important;font-weight:900!important;
+}
+.ps-route-images button:after{content:none!important}
+.ps-detail-actions{display:none!important}
+.ps-location-modal{background:rgba(13,31,68,.55)!important}
+.ps-location-dialog{
+  width:min(980px,96vw)!important;grid-template-columns:minmax(300px,1.05fr) minmax(320px,.95fr)!important;
+  background:#fff!important;color:#0d1f44!important;border:1px solid #dce4ef!important;
+  box-shadow:0 28px 90px rgba(13,31,68,.24)!important;
+}
+.ps-location-photo{min-height:440px;background:#eef3f8}
+.ps-location-photo img{display:block;width:100%;height:100%;min-height:440px;object-fit:cover}
+.ps-location-copy{padding:34px!important}
+.ps-location-copy h2{color:#0d1f44!important}
+.ps-location-copy p,.ps-location-copy dd{color:#52627c!important}
+.ps-location-copy dt{color:#66738d!important}
+.ps-location-kicker{color:#0b5cff!important}
+.ps-location-close{background:#fff!important;color:#0d1f44!important;border:1px solid #cbd7e8!important;box-shadow:0 3px 12px rgba(13,31,68,.16)}
+.ps-location-links .ps-secondary-link{color:#0b5cff!important;border-color:#b8cdf5!important}
+.ps-location-map{grid-column:1/-1;padding:0 24px 24px;background:#fff}
+.ps-location-map iframe{display:block;width:100%;height:360px;border:0;border-radius:16px}
+@media(max-width:700px){
+  .ps-location-dialog{grid-template-columns:1fr!important}
+  .ps-location-photo{min-height:260px}
+  .ps-location-photo img{min-height:260px;max-height:330px}
+  .ps-location-copy{padding:24px!important}
+  .ps-location-map{grid-column:1;padding:0 14px 14px}
+  .ps-location-map iframe{height:300px}
+}
+
 /* Checkout and inline authentication */
 .ps-checkout>header{color:#24446f!important}
 .ps-checkout>header b{color:#0d1f44!important}
