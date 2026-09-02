@@ -34,9 +34,9 @@ describe('customer location presentation',()=>{
     expect(screen.queryByText('Open in Google Maps')).toBeNull();
   });
 
-  it('omits only the map when coordinates are unavailable',()=>{
+  it('falls back to a named map when coordinates are unavailable',()=>{
     render(<LocationDetailsModal location={{name:'Legacy pickup',picture_url:'/legacy.jpg'}} onClose={()=>{}}/>);
     expect(screen.getByRole('img',{name:'Legacy pickup'})).toBeTruthy();
-    expect(screen.queryByTitle('Map of Legacy pickup')).toBeNull();
+    expect(screen.getByTitle('Map of Legacy pickup')).toBeTruthy();
   });
 });

@@ -66,11 +66,15 @@ export const journeyCapacityMessages = (journey:{remaining_seats_total?:unknown;
 export const journeyPricePromotion = (journey:{quote_status?:unknown;discount_applied?:unknown}) =>
   journey.quote_status==='offer'&&journey.discount_applied===true?'REDUCED':null;
 
-export const googleMapsEmbedUrl = (location:{latitude?:unknown;longitude?:unknown}) => {
-  if(location.latitude==null||location.longitude==null||location.latitude===''||location.longitude==='')return null;
+export const googleMapsEmbedUrl = (location:{name?:unknown;address?:unknown;latitude?:unknown;longitude?:unknown}) => {
   const latitude=Number(location.latitude),longitude=Number(location.longitude);
-  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude < -90||latitude > 90||longitude < -180||longitude > 180)return null;
-  const params=new URLSearchParams({q:`${latitude},${longitude}`,z:'15',output:'embed'});
+  const hasCoordinates=location.latitude!=null&&location.longitude!=null&&location.latitude!==''&&location.longitude!==''&&
+    Number.isFinite(latitude)&&Number.isFinite(longitude)&&latitude>=-90&&latitude<=90&&longitude>=-180&&longitude<=180;
+  const query=hasCoordinates
+    ? `${latitude},${longitude}`
+    : [location.name,location.address].map(value=>String(value||'').trim()).filter(Boolean).join(', ');
+  if(!query)return null;
+  const params=new URLSearchParams({q:query,z:'15',output:'embed'});
   return `https://www.google.com/maps?${params.toString()}`;
 };
 
