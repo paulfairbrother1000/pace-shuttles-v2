@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { publicStorageImageUrl } from '@/lib/data';
 import { availableCatalogue, availableJourneyDates, defaultJourneyPartySizes, journeyBookingCardState, journeyCapacityMessages, journeyPricePromotion, journeySeatLimit, journeysMatchingSelection, journeysNeedingCapacityHydration, setJourneyPartySize, visibleBookableJourneys, visibleJourneyResults } from '@/lib/customer-booking-view';
+import {LocationDetailsModal,LocationImageButton} from '@/components/customer-location-presentation';
 const money = (c: number) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -589,43 +590,14 @@ export default function CustomerBooking() {
                   unavailable = cardState.partyUnavailable,
                   pricePromotion = journeyPricePromotion(q),
                   seatLimit = journeySeatLimit(q),
-                  seatOptions = Array.from({ length: seatLimit }, (_, i) => i + 1);
+                  seatOptions = Array.from({ length: seatLimit }, (_, i) => i + 1),
+                  pickupLocation = catalogPickups.find((p: any) => p.id === x.pickup_id) || {name:x.pickup_name,picture_url:x.pickup_picture_url,kind:'Pick-up point'},
+                  destinationLocation = catalogDests.find((d: any) => d.id === x.destination_id) || {name:x.destination_name,picture_url:x.destination_picture_url,description:x.destination_description,kind:'Destination'};
                 return (
                   <article className="ps-journey" key={x.departure_id}>
                     <div className="ps-route-images">
-                      <button
-                        type="button"
-                        title={`View ${x.pickup_name} details`}
-                        onClick={() =>
-                          setLocationInfo(
-                            catalogPickups.find((p: any) => p.id === x.pickup_id) || {
-                              name: x.pickup_name,
-                              picture_url: x.pickup_picture_url,
-                              kind: 'Pick-up',
-                            },
-                          )
-                        }
-                      >
-                        <Photo src={x.pickup_picture_url} alt={x.pickup_name} />
-                        <span>Pick-up info</span>
-                      </button>
-                      <button
-                        type="button"
-                        title={`View ${x.destination_name} details`}
-                        onClick={() =>
-                          setLocationInfo(
-                            catalogDests.find((d: any) => d.id === x.destination_id) || {
-                              name: x.destination_name,
-                              picture_url: x.destination_picture_url,
-                              description: x.destination_description,
-                              kind: 'Destination',
-                            },
-                          )
-                        }
-                      >
-                        <Photo src={x.destination_picture_url} alt={x.destination_name} />
-                        <span>Destination info</span>
-                      </button>
+                      <LocationImageButton location={pickupLocation} onOpen={()=>setLocationInfo(pickupLocation)}/>
+                      <LocationImageButton location={destinationLocation} onOpen={()=>setLocationInfo(destinationLocation)}/>
                     </div>
                     <div className="ps-journey-main">
                       <div>
@@ -643,37 +615,6 @@ export default function CustomerBooking() {
                           {x.approx_duration_mins ? ` · ${x.approx_duration_mins} mins` : ''}
                         </p>
                         <small>{(x.vehicle_types || []).map((v: any) => v.name).join(' · ')}</small>
-                        <div className="ps-detail-actions">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setLocationInfo(
-                                catalogPickups.find((p: any) => p.id === x.pickup_id) || {
-                                  name: x.pickup_name,
-                                  picture_url: x.pickup_picture_url,
-                                  kind: 'Pick-up point',
-                                },
-                              )
-                            }
-                          >
-                            ⓘ {x.pickup_name} details
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              setLocationInfo(
-                                catalogDests.find((d: any) => d.id === x.destination_id) || {
-                                  name: x.destination_name,
-                                  picture_url: x.destination_picture_url,
-                                  description: x.destination_description,
-                                  kind: 'Destination',
-                                },
-                              )
-                            }
-                          >
-                            ⓘ {x.destination_name} details
-                          </button>
-                        </div>
                       </div>
                       <div className="ps-price">
                         <label>
@@ -750,53 +691,7 @@ export default function CustomerBooking() {
           )}
         </section>
       )}
-      {locationInfo && (
-        <div className="ps-location-modal" role="dialog" aria-modal="true" onClick={() => setLocationInfo(null)}>
-          <div className="ps-location-dialog" onClick={(e) => e.stopPropagation()}>
-            <button className="ps-location-close" onClick={() => setLocationInfo(null)} aria-label="Close">
-              ×
-            </button>
-            <Photo src={locationInfo.picture_url} alt={locationInfo.name} />
-            <div className="ps-location-copy">
-              <span className="ps-location-kicker">{locationInfo.kind || (catalogPickups.some((p: any) => p.id === locationInfo.id) ? 'Pick-up point' : 'Destination')}</span>
-              <h2>{locationInfo.name}</h2>
-              {locationInfo.description && <p>{locationInfo.description}</p>}
-              <dl>
-                {(locationInfo.address1 || locationInfo.address2 || locationInfo.town || locationInfo.region || locationInfo.postal_code) && (
-                  <>
-                    <dt>Location</dt>
-                    <dd>{[locationInfo.address1, locationInfo.address2, locationInfo.town, locationInfo.region, locationInfo.postal_code].filter(Boolean).join(', ')}</dd>
-                  </>
-                )}
-                {locationInfo.arrival_notes && (
-                  <>
-                    <dt>Arrival information</dt>
-                    <dd>{locationInfo.arrival_notes}</dd>
-                  </>
-                )}
-                {locationInfo.phone && (
-                  <>
-                    <dt>Telephone</dt>
-                    <dd>{locationInfo.phone}</dd>
-                  </>
-                )}
-              </dl>
-              <div className="ps-location-links">
-                {locationInfo.directions_url && (
-                  <a className="ps-primary" href={locationInfo.directions_url} target="_blank" rel="noreferrer">
-                    Open in Google Maps
-                  </a>
-                )}
-                {locationInfo.url && (
-                  <a className="ps-secondary-link" href={locationInfo.url} target="_blank" rel="noreferrer">
-                    Visit website
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {locationInfo&&<LocationDetailsModal location={locationInfo} onClose={()=>setLocationInfo(null)}/>}
       <section className="ps-footer-cta">
         <Link href="/partners" aria-label="Apply to partner with Pace Shuttles">
           <Image src="/partners-cta.jpg" alt="Partner with Pace Shuttles" width={2400} height={600} />

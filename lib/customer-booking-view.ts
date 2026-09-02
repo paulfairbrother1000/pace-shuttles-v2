@@ -66,6 +66,14 @@ export const journeyCapacityMessages = (journey:{remaining_seats_total?:unknown;
 export const journeyPricePromotion = (journey:{quote_status?:unknown;discount_applied?:unknown}) =>
   journey.quote_status==='offer'&&journey.discount_applied===true?'REDUCED':null;
 
+export const googleMapsEmbedUrl = (location:{latitude?:unknown;longitude?:unknown}) => {
+  if(location.latitude==null||location.longitude==null||location.latitude===''||location.longitude==='')return null;
+  const latitude=Number(location.latitude),longitude=Number(location.longitude);
+  if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||latitude < -90||latitude > 90||longitude < -180||longitude > 180)return null;
+  const params=new URLSearchParams({q:`${latitude},${longitude}`,z:'15',output:'embed'});
+  return `https://www.google.com/maps?${params.toString()}`;
+};
+
 export const defaultJourneyPartySizes = <T extends {departure_id:string}>(rows:T[]) =>
   Object.fromEntries(rows.map(row => [row.departure_id,1])) as Record<string,number>;
 
