@@ -85,12 +85,12 @@ test('price promotion labels only live discounted offers as REDUCED',()=>{
   assert.equal(journeyPricePromotion({quote_status:'sold_out_for_party',discount_applied:true}),null);
 });
 
-test('map embeds use only valid location coordinates',()=>{
+test('map embeds prefer valid coordinates and fall back to a location query',()=>{
   assert.equal(googleMapsEmbedUrl({latitude:17.074,longitude:-61.887}),'https://www.google.com/maps?q=17.074%2C-61.887&z=15&output=embed');
   assert.equal(googleMapsEmbedUrl({latitude:'17.074',longitude:'-61.887'}),'https://www.google.com/maps?q=17.074%2C-61.887&z=15&output=embed');
-  assert.equal(googleMapsEmbedUrl({latitude:null,longitude:-61.887}),null);
-  assert.equal(googleMapsEmbedUrl({latitude:'not-a-number',longitude:-61.887}),null);
-  assert.equal(googleMapsEmbedUrl({latitude:91,longitude:-61.887}),null);
+  assert.equal(googleMapsEmbedUrl({name:'Jolly Harbour',address:'Jolly Harbour, St Marys',latitude:null,longitude:-61.887}),'https://www.google.com/maps?q=Jolly+Harbour%2C+Jolly+Harbour%2C+St+Marys&z=15&output=embed');
+  assert.equal(googleMapsEmbedUrl({name:'Boom',latitude:'not-a-number',longitude:-61.887}),'https://www.google.com/maps?q=Boom&z=15&output=embed');
+  assert.equal(googleMapsEmbedUrl({name:'',address:'',latitude:91,longitude:-61.887}),null);
   assert.equal(googleMapsEmbedUrl({latitude:17.074,longitude:-181}),null);
 });
 
