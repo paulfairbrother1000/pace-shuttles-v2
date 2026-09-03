@@ -50,4 +50,16 @@ describe('JourneyConversation',()=>{
   await user.click(screen.getByRole('button',{name:'Reply to party'}));
   expect((screen.getByLabelText('Message') as HTMLTextAreaElement).value).toBe('Retry this');
  });
+
+ it('reuses a new-thread request id after a failed retry',async()=>{
+  const user=userEvent.setup();
+  const send=vi.fn().mockRejectedValueOnce(new Error('offline')).mockResolvedValue(undefined);
+  render(<JourneyConversation threadId="new-party" mode="captain" newThread windowState="open" messages={[]} onSend={send}/>);
+  await user.type(screen.getByLabelText('Message'),'Retry this first message');
+  await user.click(screen.getByRole('button',{name:'Start private conversation'}));
+  const failedRequestId=send.mock.calls[0][2];
+  expect(failedRequestId).toEqual(expect.any(String));
+  await user.click(screen.getByRole('button',{name:'Start private conversation'}));
+  expect(send.mock.calls[1][2]).toBe(failedRequestId);
+ });
 });

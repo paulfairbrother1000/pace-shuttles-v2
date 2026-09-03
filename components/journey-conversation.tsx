@@ -17,7 +17,8 @@ export type JourneyConversationProps={
  closesAt?:string|null;
  messages:JourneyMessage[];
  busy?:boolean;
- onSend:(message:string,category:string)=>Promise<void>;
+ newThread?:boolean;
+ onSend:(message:string,category:string,requestId?:string)=>Promise<void>;
 };
 
 const captainCategories=[
@@ -31,13 +32,14 @@ const captainCategories=[
 const formatDate=(value:string)=>new Date(value).toLocaleString([],{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
 const label=(value:string)=>value.replaceAll('_',' ');
 
-export function JourneyConversation({mode,windowState,closesAt,messages,busy=false,onSend}:JourneyConversationProps){
+export function JourneyConversation({mode,windowState,closesAt,messages,busy=false,newThread=false,onSend}:JourneyConversationProps){
  const [draft,setDraft]=useState('');
  const [category,setCategory]=useState('operational');
  const [sending,setSending]=useState(false);
+ const [requestId,setRequestId]=useState('');
  const open=windowState==='open';
  const customer=mode==='customer';
- const actionLabel=customer?'Contact captain':mode==='captain'?'Reply to party':'Send reply';
+ const actionLabel=customer?'Contact captain':mode==='captain'?(newThread?'Start private conversation':'Reply to party'):'Send reply';
  const stateCopy=windowState==='scheduled'
    ? 'Captain messaging will open closer to the journey.'
    : windowState==='closed'
@@ -49,8 +51,10 @@ export function JourneyConversation({mode,windowState,closesAt,messages,busy=fal
  const submit=async()=>{
   const message=draft.trim();
   if(!message||!open||busy||sending)return;
+  const stableRequestId=newThread?(requestId||crypto.randomUUID()):undefined;
+  if(stableRequestId&&!requestId)setRequestId(stableRequestId);
   setSending(true);
-  try{await onSend(message,customer?'day_of_travel':category);setDraft('');}
+  try{if(stableRequestId)await onSend(message,customer?'day_of_travel':category,stableRequestId);else await onSend(message,customer?'day_of_travel':category);setDraft('');setRequestId('');}
   catch{}
   finally{setSending(false);}
  };
@@ -66,10 +70,10 @@ export function JourneyConversation({mode,windowState,closesAt,messages,busy=fal
     {messages.length===0?<div className="empty-state">No private messages yet.</div>:null}
    </div>
    {open?<form className="form-grid journey-message-form" onSubmit={event=>{event.preventDefault();void submit()}}>
-     {customer?null:<label className="form-field"><span>Message category</span><select aria-label="Message category" value={category} onChange={event=>setCategory(event.target.value)} disabled={busy||sending}>
+     {customer?null:<label className="form-field"><span>Message category</span><select aria-label="Message category" value={category} onChange={event=>{setCategory(event.target.value);if(newThread)setRequestId('')}} disabled={busy||sending}>
        {captainCategories.map(([value,text])=><option value={value} key={value}>{text}</option>)}
      </select></label>}
-     <label className="form-field"><span>Message</span><textarea aria-label="Message" value={draft} onChange={event=>setDraft(event.target.value)} disabled={busy||sending} maxLength={4000} placeholder={customer?'Write a private day-of-travel message.':'Write a private operational update.'}/></label>
+     <label className="form-field"><span>Message</span><textarea aria-label="Message" value={draft} onChange={event=>{setDraft(event.target.value);if(newThread)setRequestId('')}} disabled={busy||sending} maxLength={4000} placeholder={customer?'Write a private day-of-travel message.':'Write a private operational update.'}/></label>
      <button className="btn" type="submit" disabled={!draft.trim()||busy||sending}>{sending?'Sending…':actionLabel}</button>
    </form>:null}
  </div>;

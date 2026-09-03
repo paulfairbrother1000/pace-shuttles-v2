@@ -159,6 +159,10 @@ export const adminRefreshLiveConsiderations=(departureId:string)=>rpc('v2_admin_
 export async function loadCaptainMyJourneys(){return select('v2_captain_my_journeys','scheduled_departure_ts',250)}
 export const captainStartJourney=(assignmentId:string)=>rpc('v2_captain_start_journey',{p_captain_assignment_id:assignmentId});
 export const captainCompleteJourney=(assignmentId:string,normal:boolean,notes:string,incident:boolean,summary:string)=>rpc('v2_captain_complete_journey',{p_captain_assignment_id:assignmentId,p_completed_normally:normal,p_captain_notes:notes,p_incident_flag:incident,p_incident_summary:summary});
+export async function loadCaptainTodayDuties(){return select('v2_captain_today_duties','first_scheduled_departure_ts',50)}
+export async function loadCaptainTodayManifest(){return select('v2_captain_today_manifest','lead_passenger_name',500)}
+export const captainStartLeg=(departureId:string)=>rpc('v2_captain_start_leg',{p_departure_id:departureId});
+export const captainEndLeg=(departureId:string,state:'normal'|'incident',notes:string,summary:string)=>rpc('v2_captain_end_leg',{p_departure_id:departureId,p_completion_state:state,p_notes:notes,p_incident_summary:summary});
 export const adminReplySupportMessage=(conversationId:string,message:string)=>rpc('v2_admin_reply_support_message',{p_conversation_id:conversationId,p_message_text:message});
 export const adminCancelPendingNotification=(notificationId:string)=>rpc('v2_admin_cancel_pending_notification',{p_notification_id:notificationId});
 
@@ -210,6 +214,10 @@ export const customerOpenSupport=(bookingId:string,message:string,category:strin
 export const customerReplySupport=(conversationId:string,message:string)=>rpc('v2_customer_reply_support',{p_conversation_id:conversationId,p_message:message});
 export const customerOpenCaptainConversation=(bookingId:string,message:string)=>rpc('v2_customer_open_captain_conversation',{p_booking_id:bookingId,p_message_text:message});
 export const customerSendCaptainMessage=(conversationId:string,message:string)=>rpc('v2_customer_send_captain_message',{p_conversation_id:conversationId,p_message_text:message});
+export const captainOpenPartyConversation=async(allocationId:string,bookingId:string,message:string,category:string,requestId?:string)=>{
+ if(!requestId?.trim())return {data:null,error:new Error('Private message request id is required')};
+ return rpc('v2_captain_open_party_conversation',{p_confirmed_allocation_id:allocationId,p_booking_id:bookingId,p_message_text:message,p_category:category,p_request_id:requestId});
+};
 export const captainReplyToParty=(conversationId:string,message:string,category:string)=>rpc('v2_captain_reply_to_party',{p_conversation_id:conversationId,p_message_text:message,p_category:category});
 export const captainBroadcastToParties=async(allocationId:string,message:string,category:string,requestId?:string)=>{
  if(!requestId?.trim())return {data:null,error:new Error('Broadcast request id is required')};
@@ -262,6 +270,21 @@ export async function loadAdminServices(){return select('v2_admin_services','nam
 export async function loadAdminAccessUsers(){return select('v2_admin_access_users','email',1000)}
 export const adminCreateService=(a:any)=>rpc('v2_admin_create_service',a);
 export const adminUpdateService=(a:any)=>rpc('v2_admin_update_service',a);
+export type PairedJourneyDesignInput={
+ serviceId:string; outboundLocalTime:string; returnEnabled:boolean;
+ returnLocalTime:string|null; returnDurationMinutes:number|null; reverseRouteId:string|null;
+};
+export const adminSavePairedJourneyDesign=(input:PairedJourneyDesignInput)=>rpc('v2_admin_save_paired_journey_design',{
+ p_service_id:input.serviceId,p_outbound_local_time:input.outboundLocalTime,
+ p_return_enabled:input.returnEnabled,p_return_local_time:input.returnLocalTime,
+ p_return_duration_minutes:input.returnDurationMinutes,p_reverse_route_id:input.reverseRouteId,
+});
+export const adminLoadPairedJourneyDesign=(serviceId:string)=>rpc('v2_admin_paired_journey_design',{p_service_id:serviceId});
+export type RouteReturnMappingInput={outboundRouteId:string;returnRouteId:string};
+export const adminSaveRouteReturnMapping=(input:RouteReturnMappingInput)=>rpc('v2_admin_save_route_return_mapping',{
+ p_outbound_route_id:input.outboundRouteId,p_return_route_id:input.returnRouteId
+});
+export const adminLoadRouteReturnMappingOptions=(serviceId:string)=>rpc('v2_admin_route_return_mapping_options',{p_service_id:serviceId});
 export const adminGenerateDepartures=(from:string,to:string)=>rpc('v2_admin_generate_departures',{p_from:from,p_to:to});
 export const adminSetPlatformUser=(email:string,role:string,displayName:string)=>rpc('v2_admin_set_platform_user',{p_email:email,p_platform_role:role,p_display_name:displayName});
 export const adminLinkOperatorUser=(operatorId:string,email:string,role:string)=>rpc('v2_admin_link_operator_user',{p_operator_id:operatorId,p_email:email,p_role:role});
