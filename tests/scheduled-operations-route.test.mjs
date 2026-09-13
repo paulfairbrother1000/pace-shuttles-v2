@@ -28,7 +28,7 @@ function dependencies(overrides = {}) {
   return {
     env,
     now: () => '2026-08-31T04:00:00.000Z',
-    createClient: () => ({ rpc: async () => ({ data: null, error: null }) }),
+    createClient: () => ({ rpc: async (name) => name==='v2_system_scheduler_begin'?{data:[{run_id:'run-default',enabled:true}],error:null}:{ data: null, error: null } }),
     dispatchDueCustomerEmails: async () => ({ claimed: 0, sent: 0, failed: 0 }),
     ...overrides,
   };
@@ -60,6 +60,7 @@ test('scheduled request completes feedback scheduling before the email claim bou
       assert.deepEqual(options, { auth: { persistSession: false } });
       return { rpc: async (name, args) => {
         calls.push([name, args]);
+        if(name==='v2_system_scheduler_begin')return {data:[{run_id:'run-complete',enabled:true}],error:null};
         return name === 'v2_system_run_scheduled_operations'
           ? { data: { departures: 4 }, error: null }
           : { data: 2, error: null };
@@ -76,14 +77,18 @@ test('scheduled request completes feedback scheduling before the email claim bou
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), {
     ok: true,
+    status:'completed',
+    runId:'run-complete',
     result: { departures: 4 },
     emails: { claimed: 2, sent: 2, failed: 0 },
   });
   assert.deepEqual(calls, [
+    ['v2_system_scheduler_begin',{p_execution_source:'scheduled',p_requested_at:'2026-08-31T04:00:00.000Z'}],
     ['v2_system_run_scheduled_operations', { p_t72_limit: 100, p_t24_limit: 100 }],
     ['v2_system_schedule_t24_journey_notifications', { p_as_of: '2026-08-31T04:00:00.000Z' }],
     ['v2_system_schedule_feedback_requests', { p_as_of: '2026-08-31T04:00:00.000Z', p_limit: 100 }],
     ['claim-and-dispatch', { limit: 25 }],
+    ['v2_system_scheduler_finish',{p_run_id:'run-complete',p_result:{operations:{departures:4},t24_queued:2,feedback_queued:2,emails:{claimed:2,sent:2,failed:0}},p_failure_reason:null}],
   ]);
 });
 
@@ -100,6 +105,8 @@ test('every scheduler error response stops later work and preserves its database
     const handler = createScheduledOperationsHandler(dependencies({
       createClient: () => ({ rpc: async (name) => {
         calls.push(name);
+        if(name==='v2_system_scheduler_begin')return {data:[{run_id:'run-error',enabled:true}],error:null};
+        if(name==='v2_system_scheduler_finish')return {data:null,error:null};
         return name === failingScheduler
           ? { data: null, error: { message: `${failingScheduler} unavailable` } }
           : { data: null, error: null };
@@ -111,7 +118,7 @@ test('every scheduler error response stops later work and preserves its database
 
     assert.equal(response.status, 500);
     assert.deepEqual(await response.json(), { error: `${failingScheduler} unavailable` });
-    assert.deepEqual(calls, schedulers.slice(0, failureIndex + 1));
+    assert.deepEqual(calls, ['v2_system_scheduler_begin',...schedulers.slice(0, failureIndex + 1),'v2_system_scheduler_finish']);
     assert.equal(dispatches, 0);
   }
 });
@@ -121,6 +128,8 @@ test('a thrown scheduling exception propagates without claiming customer email',
   let dispatches = 0;
   const handler = createScheduledOperationsHandler(dependencies({
     createClient: () => ({ rpc: async (name) => {
+      if(name==='v2_system_scheduler_begin')return {data:[{run_id:'run-throw',enabled:true}],error:null};
+      if(name==='v2_system_scheduler_finish')return {data:null,error:null};
       if (name === 'v2_system_schedule_feedback_requests') throw new Error('feedback transaction aborted');
       return { data: null, error: null };
     } }),
@@ -141,4 +150,28 @@ test('email claim or dispatch failure returns retryable service-unavailable resp
 
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { error: 'Customer email dispatch failed' });
+});
+
+test('a paused scheduler returns success without running or dispatching work',async()=>{
+ const {createScheduledOperationsHandler}=await loadRoute();const calls=[];
+ const handler=createScheduledOperationsHandler(dependencies({
+  createClient:()=>({rpc:async(name,args)=>{calls.push([name,args]);return {data:[{run_id:'run-paused',enabled:false}],error:null}}}),
+  dispatchDueCustomerEmails:async()=>{throw new Error('paused scheduler dispatched email')},
+ }));
+ const response=await handler(request('Bearer scheduled-secret'));
+ assert.equal(response.status,200);
+ assert.deepEqual(await response.json(),{ok:true,status:'paused',runId:'run-paused'});
+ assert.deepEqual(calls,[['v2_system_scheduler_begin',{p_execution_source:'scheduled',p_requested_at:'2026-08-31T04:00:00.000Z'}]]);
+});
+
+test('an enabled scheduler records successful run evidence',async()=>{
+ const {createScheduledOperationsHandler}=await loadRoute();const calls=[];
+ const handler=createScheduledOperationsHandler(dependencies({
+  createClient:()=>({rpc:async(name,args)=>{calls.push([name,args]);if(name==='v2_system_scheduler_begin')return {data:[{run_id:'run-ok',enabled:true}],error:null};return {data:name==='v2_system_run_scheduled_operations'?{departures:4}:2,error:null}}}),
+  dispatchDueCustomerEmails:async()=>({claimed:2,sent:2,failed:0}),
+ }));
+ const response=await handler(request('Bearer scheduled-secret'));
+ assert.equal(response.status,200);
+ assert.equal((await response.json()).status,'completed');
+ assert.deepEqual(calls.at(-1),['v2_system_scheduler_finish',{p_run_id:'run-ok',p_result:{operations:{departures:4},t24_queued:2,feedback_queued:2,emails:{claimed:2,sent:2,failed:0}},p_failure_reason:null}]);
 });

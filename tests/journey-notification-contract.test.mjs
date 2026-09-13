@@ -82,7 +82,7 @@ test('T-24 scheduler alerts paid bookings that have no compliant allocation yet'
 
 test('scheduled operations queues T-24 content before dispatching a bounded email batch', () => {
   assert.match(schedulerRoute, /v2_system_schedule_t24_journey_notifications/);
-  assert.match(schedulerRoute, /p_as_of:\s*deps\.now\(\)/);
+  assert.match(schedulerRoute, /requestedAt=deps\.now\(\)[\s\S]*p_as_of:\s*requestedAt/);
   assert.match(schedulerRoute, /now:\s*\(\)\s*=>\s*new Date\(\)\.toISOString\(\)/);
   assert.match(schedulerRoute, /deps\.dispatchDueCustomerEmails\(25\)/);
   assert.match(schedulerRoute, /status:\s*503/);

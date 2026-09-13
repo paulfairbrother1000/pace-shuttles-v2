@@ -70,7 +70,7 @@ test('scheduled operations propagates feedback scheduler failure before email cl
   const dispatchCall=schedulerSource.indexOf('deps.dispatchDueCustomerEmails(25)');
   assert.ok(feedbackCall>=0,'feedback scheduler call missing');
   assert.ok(dispatchCall>feedbackCall,'feedback scheduler must run before email claiming and dispatch');
-  assert.match(schedulerSource,/feedbackError[\s\S]*status:\s*500/i);
+  assert.match(schedulerSource,/feedback[.]error[\s\S]*SchedulerRpcError[\s\S]*status:\s*500/i);
 });
 
 test('NPS 0 to 2 opens review evidence without affecting operator quality',()=>{

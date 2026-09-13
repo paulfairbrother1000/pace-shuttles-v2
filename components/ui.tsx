@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import React, { ReactNode } from 'react';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
-import { LayoutDashboard, Activity, BookOpen, Users, MapPinned, BarChart3, WalletCards, Headphones, Settings, Menu, ChevronRight, ShipWheel, CircleDollarSign, CarFront, UserRound, Route, Bell, MoreHorizontal } from 'lucide-react';
+import { LayoutDashboard, Activity, BookOpen, Users, MapPinned, BarChart3, WalletCards, Headphones, Settings, Menu, ChevronRight, ShipWheel, CircleDollarSign, CarFront, UserRound, Route, Bell, MoreHorizontal, CalendarClock } from 'lucide-react';
 
 export function Brand(){ return <div className="brand"><div className="brandmark">P</div><div><b>Pace</b><small>SHUTTLES</small></div></div> }
 
@@ -17,6 +17,7 @@ const adminNav = [
   ['/admin/analytics','Analytics',BarChart3],
   ['/admin/finance','Finance',WalletCards],
   ['/admin/support','Support',Headphones],
+  ['/admin/clock-calendar','Clock, Calendar & Triggers',CalendarClock],
   ['/admin/settings','Configuration',Settings]
 ] as const;
 
