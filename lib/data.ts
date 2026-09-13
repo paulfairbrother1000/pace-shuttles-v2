@@ -157,6 +157,7 @@ export const adminProcessDepartureT24=(departureId:string,force=false)=>rpc('v2_
 export const adminRefreshLiveConsiderations=(departureId:string)=>rpc('v2_admin_refresh_live_considerations',{p_departure_id:departureId});
 
 export async function loadCaptainMyJourneys(){return select('v2_captain_my_journeys','scheduled_departure_ts',250)}
+export async function loadCaptainIdentities(){return rpc('v2_captain_my_identities',{})}
 export const captainStartJourney=(assignmentId:string)=>rpc('v2_captain_start_journey',{p_captain_assignment_id:assignmentId});
 export const captainCompleteJourney=(assignmentId:string,normal:boolean,notes:string,incident:boolean,summary:string)=>rpc('v2_captain_complete_journey',{p_captain_assignment_id:assignmentId,p_completed_normally:normal,p_captain_notes:notes,p_incident_flag:incident,p_incident_summary:summary});
 export async function loadCaptainTodayDuties(){return select('v2_captain_today_duties','first_scheduled_departure_ts',50)}

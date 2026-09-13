@@ -33,9 +33,46 @@ async function openParty(){await userEvent.setup().click(await screen.findByRole
 async function openAll(){await userEvent.setup().click(await screen.findByRole('button',{name:'Message all'}))}
 const dutyButton=(name:string)=>screen.getByRole('button',{name:new RegExp(name)});
 
-afterEach(()=>{cleanup();vi.restoreAllMocks()});
+afterEach(()=>{cleanup();sessionStorage.clear();vi.restoreAllMocks()});
 
 describe('CaptainDashboard journey messaging integration',()=>{
+ it('requires a shared login to choose a captain and scopes the dashboard to that identity',async()=>{
+  window.history.replaceState({},'', '/captain');
+  const antigua={captain_id:'captain-antigua',captain_name:'Paul Fairbrother',operator_id:'operator-antigua',operator_name:'Antigua Boats'};
+  const barefoot={captain_id:'captain-barefoot',captain_name:'Stevie Steve',operator_id:'operator-barefoot',operator_name:'Barefoot'};
+  const antiguaDuty={...todayDuty,captain_id:antigua.captain_id,captain_name:antigua.captain_name,operator_id:antigua.operator_id,operator_name:antigua.operator_name,leg_1_name:'Antigua duty'};
+  const barefootDuty={...todayDuty,id:'allocation-barefoot',duty_id:'allocation-barefoot',confirmed_allocation_id:'allocation-barefoot',captain_id:barefoot.captain_id,captain_name:barefoot.captain_name,operator_id:barefoot.operator_id,operator_name:barefoot.operator_name,leg_1_name:'Barefoot duty'};
+  render(<CaptainDashboard loaders={loaders({identities:async()=>ok([antigua,barefoot]),todayDuties:async()=>ok([antiguaDuty,barefootDuty]),todayManifest:async()=>ok([])} as any)} actions={actions()}/>);
+
+  expect(await screen.findByRole('heading',{name:'Choose captain'})).toBeTruthy();
+  expect(screen.queryByRole('link',{name:'Today'})).toBeNull();
+  await userEvent.setup().click(screen.getByRole('button',{name:/Paul Fairbrother.*Antigua Boats/}));
+
+  expect(await screen.findByRole('heading',{name:'Paul Fairbrother'})).toBeTruthy();
+  expect(sessionStorage.getItem('pace-active-captain-id')).toBe(antigua.captain_id);
+  expect(screen.getByText('Representing Antigua Boats')).toBeTruthy();
+  expect(screen.getByRole('heading',{name:'Antigua duty'})).toBeTruthy();
+  expect(screen.queryByText('Barefoot duty')).toBeNull();
+
+  await userEvent.setup().click(screen.getByRole('button',{name:'Switch captain'}));
+  expect(sessionStorage.getItem('pace-active-captain-id')).toBeNull();
+  expect(await screen.findByRole('heading',{name:'Choose captain'})).toBeTruthy();
+  await userEvent.setup().click(screen.getByRole('button',{name:/Stevie Steve.*Barefoot/}));
+  expect(await screen.findByRole('heading',{name:'Stevie Steve'})).toBeTruthy();
+  expect(screen.getByText('Representing Barefoot')).toBeTruthy();
+  expect(screen.getByRole('heading',{name:'Barefoot duty'})).toBeTruthy();
+  expect(screen.queryByText('Antigua duty')).toBeNull();
+ });
+
+ it('automatically selects a sole captain while keeping identity visible in the header',async()=>{
+  const captain={captain_id:'captain-antigua',captain_name:'Paul Fairbrother',operator_id:'operator-antigua',operator_name:'Antigua Boats'};
+  render(<CaptainDashboard loaders={loaders({identities:async()=>ok([captain]),todayDuties:async()=>ok([{...todayDuty,...captain}]),todayManifest:async()=>ok([])} as any)} actions={actions()}/>);
+  expect(await screen.findByRole('heading',{name:'Paul Fairbrother'})).toBeTruthy();
+  expect(screen.getByText('Representing Antigua Boats')).toBeTruthy();
+  expect(screen.queryByRole('heading',{name:'Choose captain'})).toBeNull();
+  expect(screen.queryByRole('button',{name:'Switch captain'})).toBeNull();
+ });
+
  it.each(['/captain','/captain?tab=unknown'])('canonicalizes an active Today tab from %s',async(path)=>{
   window.history.replaceState({},'',path);
   render(<CaptainDashboard loaders={loaders()} actions={actions()}/>);
