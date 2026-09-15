@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { dispatchDueCustomerEmails } from '@/lib/customer-email';
 import { createScheduledOperationsHandler } from '@/lib/scheduled-operations-handler';
+import { dispatchSchedulerAdminAlerts } from '@/lib/scheduler-admin-alerts';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -12,4 +13,5 @@ export const GET = createScheduledOperationsHandler({
   return { rpc: (name, args) => client.rpc(name as never, args as never) };
  },
  dispatchDueCustomerEmails,
+ dispatchSchedulerAdminAlerts,
 });

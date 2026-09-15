@@ -17,11 +17,16 @@ import {LiveOperations} from './dashboard';
 afterEach(()=>{cleanup();loadAdminLiveOperationsDetail.mockClear()});
 
 describe('LiveOperations scope',()=>{
- it('loads operational journeys by default and can drill into past or closed history',async()=>{
+ it('loads today onwards by default and offers useful date filters including past history',async()=>{
   render(<LiveOperations/>);
   await waitFor(()=>expect(loadAdminLiveOperationsDetail).toHaveBeenCalledWith('operational'));
   const scope=screen.getByLabelText('Journey scope');
   expect((scope as HTMLSelectElement).value).toBe('operational');
+  expect(screen.getByRole('option',{name:'Today onwards'})).toBeTruthy();
+  await userEvent.setup().selectOptions(scope,'today');
+  await waitFor(()=>expect(loadAdminLiveOperationsDetail).toHaveBeenLastCalledWith('today'));
+  await userEvent.setup().selectOptions(scope,'next_7_days');
+  await waitFor(()=>expect(loadAdminLiveOperationsDetail).toHaveBeenLastCalledWith('next_7_days'));
   await userEvent.setup().selectOptions(scope,'past_closed');
   await waitFor(()=>expect(loadAdminLiveOperationsDetail).toHaveBeenLastCalledWith('past_closed'));
   expect(screen.getByRole('option',{name:'Past / closed'})).toBeTruthy();

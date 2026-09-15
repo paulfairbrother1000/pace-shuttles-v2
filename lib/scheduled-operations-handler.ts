@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { dispatchDueCustomerEmails } from '@/lib/customer-email';
+import { dispatchSchedulerAdminAlerts } from '@/lib/scheduler-admin-alerts';
 
 type SchedulerClient = {
   rpc: (name: string, args?: Record<string, unknown>) => PromiseLike<{
@@ -13,6 +14,7 @@ type ScheduledOperationsDependencies = {
   now: () => string;
   createClient: (url: string, key: string, options: { auth: { persistSession: boolean } }) => SchedulerClient;
   dispatchDueCustomerEmails: typeof dispatchDueCustomerEmails;
+  dispatchSchedulerAdminAlerts: typeof dispatchSchedulerAdminAlerts;
 };
 
 export function createScheduledOperationsHandler(deps: ScheduledOperationsDependencies) {
@@ -25,13 +27,14 @@ export function createScheduledOperationsHandler(deps: ScheduledOperationsDepend
     const key = deps.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) return NextResponse.json({ error: 'Server configuration incomplete' }, { status: 500 });
     const supabase = deps.createClient(url, key, { auth: { persistSession: false } });
+    const dispatchAdminAlerts=async()=>{try{await deps.dispatchSchedulerAdminAlerts(25)}catch(error:unknown){console.error('Scheduler Site Admin alert dispatch failed',error instanceof Error?error.message:error)}};
     const requestedAt=deps.now();
     const {data:beginData,error:beginError}=await supabase.rpc('v2_system_scheduler_begin',{p_execution_source:'scheduled',p_requested_at:requestedAt});
     if(beginError)return NextResponse.json({error:beginError.message},{status:500});
     const begin=Array.isArray(beginData)?beginData[0]:beginData as {run_id?:string;enabled?:boolean}|null;
     const runId=String(begin?.run_id||'');
     if(!runId)return NextResponse.json({error:'Scheduler run could not be started'},{status:500});
-    if(begin?.enabled===false)return NextResponse.json({ok:true,status:'paused',runId});
+    if(begin?.enabled===false){await dispatchAdminAlerts();return NextResponse.json({ok:true,status:'paused',runId});}
     const partial:Record<string,unknown>={};
     const runPhase=async<T>(phase:string,operation:()=>Promise<T>)=>{
       const started=await supabase.rpc('v2_system_scheduler_phase_start',{p_run_id:runId,p_phase:phase});
@@ -58,6 +61,7 @@ export function createScheduledOperationsHandler(deps: ScheduledOperationsDepend
     }catch(error:unknown){
       const message=error instanceof Error?error.message:'Scheduled operations failed';
       await supabase.rpc('v2_system_scheduler_finish',{p_run_id:runId,p_result:partial,p_failure_reason:message});
+      await dispatchAdminAlerts();
       if(!(error instanceof SchedulerRpcError))throw error;
       return NextResponse.json({error:message},{status:500});
     }
@@ -68,11 +72,13 @@ export function createScheduledOperationsHandler(deps: ScheduledOperationsDepend
     } catch (error: unknown) {
       console.error('Customer email dispatch failed', error instanceof Error ? error.message : error);
       await supabase.rpc('v2_system_scheduler_finish',{p_run_id:runId,p_result:partial,p_failure_reason:'Customer email dispatch failed'});
+      await dispatchAdminAlerts();
       return NextResponse.json({ error: 'Customer email dispatch failed' }, { status: 503 });
     }
     const result=partial;
     const {error:finishError}=await supabase.rpc('v2_system_scheduler_finish',{p_run_id:runId,p_result:result,p_failure_reason:null});
     if(finishError)return NextResponse.json({error:finishError.message},{status:500});
+    await dispatchAdminAlerts();
     return NextResponse.json({ ok: true,status:'completed',runId, result: data, emails: emailResult });
   };
 }

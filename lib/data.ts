@@ -13,8 +13,9 @@ async function selectAdminJourneys(table:string,scope:AdminJourneyScope,limit:nu
   const s=getSupabaseBrowserClient(); if(!s) return {data:[] as DbRow[],error:new Error('Supabase not configured')};
   const spec=journeyScopeSpec(scope);
   let q=s.from(table).select('*').limit(limit);
-  if(spec.includedStatuses)q=q.in('departure_status',spec.includedStatuses).lt('scheduled_departure_ts',spec.before!);
-  if(spec.excludedStatuses)q=q.not('departure_status','in',`(${spec.excludedStatuses.join(',')})`).gte('scheduled_departure_ts',spec.since!);
+  if(spec.includedStatuses)q=q.in('departure_status',spec.includedStatuses);
+  if(spec.since)q=q.gte('scheduled_departure_ts',spec.since);
+  if(spec.before)q=q.lt('scheduled_departure_ts',spec.before);
   q=q.order('scheduled_departure_ts',{ascending:spec.ascending});
   const {data,error}=await q; return {data:(data??[]) as DbRow[],error};
 }

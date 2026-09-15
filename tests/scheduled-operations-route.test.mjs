@@ -7,7 +7,7 @@ async function loadRoute() {
   const source = readFileSync(new URL('../lib/scheduled-operations-handler.ts', import.meta.url), 'utf8')
     .replace(/^import .*;\s*$/gm, '');
   const nextResponse = `const NextResponse={json:(body,init={})=>new Response(JSON.stringify(body),{status:init.status??200,headers:{'content-type':'application/json'}})};\n`;
-  const imports = `const createClient=()=>{throw new Error('production Supabase dependency used in test')};\nconst dispatchDueCustomerEmails=async()=>{throw new Error('production email dependency used in test')};\n`;
+  const imports = `const createClient=()=>{throw new Error('production Supabase dependency used in test')};\nconst dispatchDueCustomerEmails=async()=>{throw new Error('production email dependency used in test')};\nconst dispatchSchedulerAdminAlerts=async()=>{throw new Error('production scheduler alert dependency used in test')};\n`;
   const compiled = ts.transpileModule(nextResponse + imports + source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
   }).outputText;
@@ -30,6 +30,7 @@ function dependencies(overrides = {}) {
     now: () => '2026-08-31T04:00:00.000Z',
     createClient: () => ({ rpc: async (name) => name==='v2_system_scheduler_begin'?{data:[{run_id:'run-default',enabled:true}],error:null}:{ data: null, error: null } }),
     dispatchDueCustomerEmails: async () => ({ claimed: 0, sent: 0, failed: 0 }),
+    dispatchSchedulerAdminAlerts: async () => ({ claimed: 0, sent: 0, failed: 0 }),
     ...overrides,
   };
 }
@@ -205,4 +206,26 @@ test('a later phase failure preserves earlier results and names the failed phase
   p_result:{operations:{t72_processed:2,t24_processed:1},t24_queued:3},
   p_failure_reason:'feedback unavailable',
  }]);
+});
+
+test('a failed scheduled run attempts the deduplicated Site Admin alert after failure evidence is committed',async()=>{
+ const {createScheduledOperationsHandler}=await loadRoute();const calls=[];
+ const handler=createScheduledOperationsHandler(dependencies({
+  createClient:()=>({rpc:async(name,args)=>{calls.push(name);if(name==='v2_system_scheduler_begin')return {data:[{run_id:'run-alert',enabled:true}],error:null};if(name==='v2_system_run_scheduled_operations')return {data:null,error:{message:'operations timed out'}};return {data:null,error:null}}}),
+  dispatchSchedulerAdminAlerts:async()=>{calls.push('dispatch-admin-alerts');return {claimed:1,sent:1,failed:0}},
+ }));
+ const response=await handler(request('Bearer scheduled-secret'));
+ assert.equal(response.status,500);
+ assert.ok(calls.indexOf('v2_system_scheduler_finish')<calls.indexOf('dispatch-admin-alerts'));
+});
+
+test('every successful scheduled run retries pending failure or recovery alerts without changing job success',async()=>{
+ const {createScheduledOperationsHandler}=await loadRoute();let alertDispatches=0;
+ const handler=createScheduledOperationsHandler(dependencies({
+  dispatchSchedulerAdminAlerts:async()=>{alertDispatches++;throw new Error('alert provider unavailable')},
+ }));
+ const response=await handler(request('Bearer scheduled-secret'));
+ assert.equal(response.status,200);
+ assert.equal(alertDispatches,1);
+ assert.equal((await response.json()).status,'completed');
 });

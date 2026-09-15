@@ -3,7 +3,7 @@
 import './admin-clock-calendar.css';
 import React,{useEffect,useState} from 'react';
 import {Section,Status} from './ui';
-import {eventLabel,formatJourneyTime,schedulerRequest,sortEvents,statusLabel,type SchedulerModel} from '@/lib/admin-scheduler';
+import {eventLabel,formatJourneyTime,formatNextScheduledRun,schedulerRequest,sortEvents,statusLabel,type SchedulerModel} from '@/lib/admin-scheduler';
 import {phaseLabel,schedulerPhaseSummary,schedulerRunDuration,schedulerRunImpact,schedulerRunResolution,schedulerRunSummary,type SchedulerRun} from '@/lib/scheduler-history';
 
 const runTime=(value?:string|null)=>value?new Date(value).toLocaleString():'—';
@@ -35,7 +35,7 @@ export function AdminClockCalendar({initial,request=schedulerRequest}:{initial?:
  const latest=model.dashboard.latest_run;
  const history=model.dashboard.recent_runs?.length?model.dashboard.recent_runs:(latest?[latest]:[]);
  return <div className="scheduler-admin">
-  <Section title="Scheduled clock"><div className="scheduler-state"><div><Status value={enabled?'Scheduler ON':'Scheduler OFF'}/><p>{enabled?'Scheduled processing is running against the real clock.':'Scheduled work is paused. Due items will become overdue.'}</p></div><button className={enabled?'btn danger':'btn'} disabled={busy} onClick={()=>setConfirm(true)} aria-label={`Turn scheduler ${enabled?'off':'on'}`}>Turn {enabled?'off':'on'}</button></div>{error?<p className="action-error" role="alert">{error}</p>:null}</Section>
+  <Section title="Scheduled clock"><div className="scheduler-state"><div><Status value={enabled?'Scheduler ON':'Scheduler OFF'}/><p>{enabled?'Scheduled processing is running against the real clock.':'Scheduled work is paused. Due items will become overdue.'}</p>{model.dashboard.control.next_scheduled_run_at?<p><b>Next scheduled run</b><br/>{formatNextScheduledRun(model.dashboard.control.next_scheduled_run_at)}</p>:null}</div><button className={enabled?'btn danger':'btn'} disabled={busy} onClick={()=>setConfirm(true)} aria-label={`Turn scheduler ${enabled?'off':'on'}`}>Turn {enabled?'off':'on'}</button></div>{error?<p className="action-error" role="alert">{error}</p>:null}</Section>
   {confirm?<div className="modal-backdrop"><div className="card scheduler-dialog" role="dialog" aria-modal="true"><h2>{enabled?'Pause scheduled processing?':'Restart scheduled processing?'}</h2><p>{enabled?'Due communications and lifecycle events will wait until the scheduler is restarted.':'All overdue communications and lifecycle events will be processed immediately.'}</p>{enabled?<label>Reason for pausing<input aria-label="Reason for pausing" value={reason} onChange={e=>setReason(e.target.value)}/></label>:null}<div className="scheduler-actions"><button className="btn secondary" onClick={()=>setConfirm(false)}>Cancel</button><button className="btn" disabled={busy} onClick={change}>Confirm</button></div></div></div>:null}
   <Section title="Latest execution">{latest?<><p><b>{statusLabel(latest.status)}</b> · {runTime(latest.started_at)} · {schedulerRunDuration(latest)}</p><p>{schedulerRunSummary(latest)}</p>{latest.failure_reason?<p className="action-error">{latest.failure_reason}</p>:null}</>:<p className="empty-state">No scheduler runs recorded.</p>}</Section>
   <Section title="Execution history"><div className="scheduler-history">{history.map(run=><RunHistoryRow run={run} key={run.id}/>)}</div>{!history.length?<p className="empty-state">No scheduler runs recorded.</p>:null}</Section>
