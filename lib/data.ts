@@ -1,6 +1,7 @@
 'use client';
 import { getSupabaseBrowserClient } from './supabase';
 import { buildGeographyImagePath, type GeographyKind } from './admin-geography';
+import {journeyScopeSpec,type AdminJourneyScope} from './journey-scope';
 
 export type DbRow = Record<string, any>;
 async function select(table:string, order?:string, limit=500){
@@ -8,7 +9,16 @@ async function select(table:string, order?:string, limit=500){
   let q=s.from(table).select('*').limit(limit); if(order) q=q.order(order,{ascending:true});
   const {data,error}=await q; return {data:(data??[]) as DbRow[],error};
 }
-export async function loadAdminJourneys(){return select('v2_api_admin_live_operations','scheduled_departure_ts',250)}
+async function selectAdminJourneys(table:string,scope:AdminJourneyScope,limit:number){
+  const s=getSupabaseBrowserClient(); if(!s) return {data:[] as DbRow[],error:new Error('Supabase not configured')};
+  const spec=journeyScopeSpec(scope);
+  let q=s.from(table).select('*').limit(limit);
+  if(spec.includedStatuses)q=q.in('departure_status',spec.includedStatuses).lt('scheduled_departure_ts',spec.before!);
+  if(spec.excludedStatuses)q=q.not('departure_status','in',`(${spec.excludedStatuses.join(',')})`).gte('scheduled_departure_ts',spec.since!);
+  q=q.order('scheduled_departure_ts',{ascending:spec.ascending});
+  const {data,error}=await q; return {data:(data??[]) as DbRow[],error};
+}
+export async function loadAdminJourneys(scope:AdminJourneyScope='operational'){return selectAdminJourneys('v2_api_admin_live_operations',scope,250)}
 export async function loadOperatorJourneys(){return select('v2_operator_my_dashboard','scheduled_departure_ts',250)}
 export async function loadOperatorLiabilities(){return select('v2_api_operator_liabilities','created_at',250)}
 export async function loadCustomerBookings(){return select('v2_customer_my_orders','scheduled_departure_ts',250)}
@@ -34,7 +44,7 @@ export async function loadAdminPartnerApplications(){return select('v2_admin_par
 export const adminSetPartnerApplicationStatus=(id:string,status:'under_review'|'rejected',admin_notes:string)=>rpc('v2_admin_set_partner_application_status',{p_application_id:id,p_status:status,p_admin_notes:admin_notes||null});
 export const adminApprovePartnerApplication=(id:string)=>rpc('v2_admin_approve_partner_application',{p_application_id:id});
 
-export async function loadAdminLiveOperationsDetail(){return select('v2_admin_live_operations_detail','scheduled_departure_ts',500)}
+export async function loadAdminLiveOperationsDetail(scope:AdminJourneyScope='operational'){return selectAdminJourneys('v2_admin_live_operations_detail',scope,500)}
 export async function loadAdminJourneyBookings(){return select('v2_admin_journey_bookings','booked_at',1000)}
 export async function loadAdminJourneyAllocations(){return select('v2_admin_journey_allocations','confirmed_at',500)}
 

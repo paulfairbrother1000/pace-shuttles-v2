@@ -82,7 +82,7 @@ test('scheduled request completes feedback scheduling before the email claim bou
     result: { departures: 4 },
     emails: { claimed: 2, sent: 2, failed: 0 },
   });
-  assert.deepEqual(calls, [
+  assert.deepEqual(calls.filter(([name])=>!name.includes('scheduler_phase')), [
     ['v2_system_scheduler_begin',{p_execution_source:'scheduled',p_requested_at:'2026-08-31T04:00:00.000Z'}],
     ['v2_system_run_scheduled_operations', { p_t72_limit: 100, p_t24_limit: 100 }],
     ['v2_system_schedule_t24_journey_notifications', { p_as_of: '2026-08-31T04:00:00.000Z' }],
@@ -118,7 +118,7 @@ test('every scheduler error response stops later work and preserves its database
 
     assert.equal(response.status, 500);
     assert.deepEqual(await response.json(), { error: `${failingScheduler} unavailable` });
-    assert.deepEqual(calls, ['v2_system_scheduler_begin',...schedulers.slice(0, failureIndex + 1),'v2_system_scheduler_finish']);
+    assert.deepEqual(calls.filter(name=>!name.includes('scheduler_phase')), ['v2_system_scheduler_begin',...schedulers.slice(0, failureIndex + 1),'v2_system_scheduler_finish']);
     assert.equal(dispatches, 0);
   }
 });
@@ -174,4 +174,35 @@ test('an enabled scheduler records successful run evidence',async()=>{
  assert.equal(response.status,200);
  assert.equal((await response.json()).status,'completed');
  assert.deepEqual(calls.at(-1),['v2_system_scheduler_finish',{p_run_id:'run-ok',p_result:{operations:{departures:4},t24_queued:2,feedback_queued:2,emails:{claimed:2,sent:2,failed:0}},p_failure_reason:null}]);
+});
+
+test('a later phase failure preserves earlier results and names the failed phase',async()=>{
+ const {createScheduledOperationsHandler}=await loadRoute();const calls=[];
+ const handler=createScheduledOperationsHandler(dependencies({
+  createClient:()=>({rpc:async(name,args)=>{
+   calls.push([name,args]);
+   if(name==='v2_system_scheduler_begin')return {data:[{run_id:'run-phases',enabled:true}],error:null};
+   if(name==='v2_system_run_scheduled_operations')return {data:{t72_processed:2,t24_processed:1},error:null};
+   if(name==='v2_system_schedule_t24_journey_notifications')return {data:3,error:null};
+   if(name==='v2_system_schedule_feedback_requests')return {data:null,error:{message:'feedback unavailable'}};
+   return {data:null,error:null};
+  }}),
+  dispatchDueCustomerEmails:async()=>{throw new Error('email delivery must not run')},
+ }));
+
+ const response=await handler(request('Bearer scheduled-secret'));
+ assert.equal(response.status,500);
+ assert.deepEqual(calls.filter(([name])=>name.includes('scheduler_phase')).map(([name,args])=>[name,args.p_phase,args.p_failure_reason||null]),[
+  ['v2_system_scheduler_phase_start','journey_operations',null],
+  ['v2_system_scheduler_phase_finish','journey_operations',null],
+  ['v2_system_scheduler_phase_start','t24_communications',null],
+  ['v2_system_scheduler_phase_finish','t24_communications',null],
+  ['v2_system_scheduler_phase_start','feedback_communications',null],
+  ['v2_system_scheduler_phase_finish','feedback_communications','feedback unavailable'],
+ ]);
+ assert.deepEqual(calls.at(-1),['v2_system_scheduler_finish',{
+  p_run_id:'run-phases',
+  p_result:{operations:{t72_processed:2,t24_processed:1},t24_queued:3},
+  p_failure_reason:'feedback unavailable',
+ }]);
 });

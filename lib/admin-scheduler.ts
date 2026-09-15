@@ -1,6 +1,7 @@
 import {getSupabaseBrowserClient} from './supabase';
+import type {SchedulerRun} from './scheduler-history';
 export type SchedulerEvent={event_key:string;departure_id:string;booking_id:string;route_name:string;event_type:'t24'|'feedback';due_at:string;journey_timezone:string;execution_source:'scheduled'|'manual';executed_at:string|null;status:'pending'|'paused'|'overdue'|'processing'|'sent'|'failed';failure_reason:string|null};
-export type SchedulerModel={dashboard:{control:{enabled:boolean;changed_at:string;reason?:string};latest_run?:any;audit:any[]};events:SchedulerEvent[]};
+export type SchedulerModel={dashboard:{control:{enabled:boolean;changed_at:string;reason?:string};latest_run?:SchedulerRun;recent_runs?:SchedulerRun[];audit:any[]};events:SchedulerEvent[]};
 export const eventLabel=(v:string)=>v==='t24'?'T-24 journey email':v==='feedback'?'Post-travel feedback':v;
 export const statusLabel=(v:string)=>v.charAt(0).toUpperCase()+v.slice(1).replaceAll('_',' ');
 export const sortEvents=(rows:SchedulerEvent[])=>[...rows].sort((a,b)=>new Date(a.due_at).getTime()-new Date(b.due_at).getTime()||a.event_key.localeCompare(b.event_key));

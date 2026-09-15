@@ -16,7 +16,8 @@ async function loadDataApi() {
   const path = new URL('../lib/data.ts', import.meta.url);
   const source = readFileSync(path, 'utf8')
     .replace("import { getSupabaseBrowserClient } from './supabase';", "const getSupabaseBrowserClient=()=>({rpc:(name,args)=>({data:{name,args},error:null}),from:()=>({select:()=>({limit:()=>({order:()=>({data:[],error:null})})})})});")
-    .replace("import { buildGeographyImagePath, type GeographyKind } from './admin-geography';", "const buildGeographyImagePath=()=>'';");
+    .replace("import { buildGeographyImagePath, type GeographyKind } from './admin-geography';", "const buildGeographyImagePath=()=>'';")
+    .replace("import {journeyScopeSpec,type AdminJourneyScope} from './journey-scope';","const journeyScopeSpec=()=>({ascending:true});");
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText;

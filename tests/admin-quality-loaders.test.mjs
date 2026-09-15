@@ -6,7 +6,8 @@ import ts from 'typescript';
 async function loadData(client){
  const source=readFileSync(new URL('../lib/data.ts',import.meta.url),'utf8')
   .replace("import { getSupabaseBrowserClient } from './supabase';","const getSupabaseBrowserClient=()=>globalThis.__adminQualityClient;")
-  .replace("import { buildGeographyImagePath, type GeographyKind } from './admin-geography';","type GeographyKind='country'|'pickup'|'destination'; const buildGeographyImagePath=()=>'';");
+  .replace("import { buildGeographyImagePath, type GeographyKind } from './admin-geography';","type GeographyKind='country'|'pickup'|'destination'; const buildGeographyImagePath=()=>'';")
+  .replace("import {journeyScopeSpec,type AdminJourneyScope} from './journey-scope';","type AdminJourneyScope='operational'|'past_closed'; const journeyScopeSpec=()=>({ascending:true});");
  const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2022}}).outputText;
  globalThis.__adminQualityClient=client;
  return import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}#${Math.random()}`);

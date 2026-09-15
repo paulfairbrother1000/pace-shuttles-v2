@@ -1,7 +1,8 @@
 'use client';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import React,{ useEffect, useMemo, useState } from 'react';
 import { loadAdminJourneys, loadAdminLiveOperationsDetail, loadOperators, loadSettlements } from '@/lib/data';
+import type {AdminJourneyScope} from '@/lib/journey-scope';
 import { KpiCard, Section, Status } from './ui';
 const money=(c:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format((c||0)/100);
 const when=(x:any)=>x?new Date(x).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}):'—';
@@ -28,8 +29,8 @@ export function Dashboard(){
   </>
 }
 export function LiveOperations(){
-  const [rows,setRows]=useState<any[]>([]),[err,setErr]=useState(''),[search,setSearch]=useState(''),[status,setStatus]=useState('ALL'),[country,setCountry]=useState('ALL');
-  useEffect(()=>{loadAdminLiveOperationsDetail().then(r=>{setRows(r.data);setErr(r.error?.message||'')})},[]);
+  const [rows,setRows]=useState<any[]>([]),[err,setErr]=useState(''),[search,setSearch]=useState(''),[status,setStatus]=useState('ALL'),[country,setCountry]=useState('ALL'),[scope,setScope]=useState<AdminJourneyScope>('operational');
+  useEffect(()=>{loadAdminLiveOperationsDetail(scope).then(r=>{setRows(r.data);setErr(r.error?.message||'')})},[scope]);
   const countries=useMemo(()=>[...new Set(rows.map(x=>x.country_name).filter(Boolean))].sort(),[rows]);
   const filtered=useMemo(()=>rows.filter(x=>{
     const q=search.trim().toLowerCase();
@@ -46,7 +47,7 @@ export function LiveOperations(){
     <div className="grid-4"><KpiCard label="Journeys" value={String(filtered.length)}/><KpiCard label="Confirmed" value={String(confirmed)}/><KpiCard label="At Risk / Consideration" value={String(consideration)}/><KpiCard label="Booked Seats" value={String(seats)}/></div>
     {err&&<p className="data-note">{err}</p>}
     <Section title="Live Operations" action={<span className="data-note">Customer revenue {money(revenue)}</span>}>
-      <div className="toolbar"><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search route, operator, vehicle, captain or place…"/><select value={country} onChange={e=>setCountry(e.target.value)}><option value="ALL">All countries</option>{countries.map(x=><option key={x} value={x}>{x}</option>)}</select><select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">All statuses</option><option value="UNDER_CONSIDERATION">Under consideration</option><option value="AT_RISK">At risk</option><option value="CONFIRMED">Confirmed</option><option value="COMPLETED">Completed</option><option value="CANCELLED">Cancelled</option></select></div>
+      <div className="toolbar"><select aria-label="Journey scope" value={scope} onChange={e=>{setScope(e.target.value as AdminJourneyScope);setStatus('ALL');setCountry('ALL')}}><option value="operational">Operational</option><option value="past_closed">Past / closed</option></select><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search route, operator, vehicle, captain or place…"/><select value={country} onChange={e=>setCountry(e.target.value)}><option value="ALL">All countries</option>{countries.map(x=><option key={x} value={x}>{x}</option>)}</select><select value={status} onChange={e=>setStatus(e.target.value)}><option value="ALL">All statuses</option><option value="UNDER_CONSIDERATION">Under consideration</option><option value="AT_RISK">At risk</option><option value="CONFIRMED">Confirmed</option><option value="COMPLETED">Completed</option><option value="CANCELLED">Cancelled</option><option value="CLOSED_UNRECORDED">Closed — outcome unrecorded</option></select></div>
       <div className="journey-list">{filtered.map(x=><Link href={`/admin/journeys/${x.departure_id}`} className="journey-card live-detail" key={x.departure_id}>
         <div><Status value={String(x.departure_status).replaceAll('_',' ').toUpperCase()}/><b style={{marginTop:6}}>{when(x.scheduled_departure_ts)}</b></div>
         <div><b>{x.route_name}</b><small>{[x.locality_name,x.region_name,x.country_name].filter(Boolean).join(' · ')||x.trip_timezone}</small></div>
