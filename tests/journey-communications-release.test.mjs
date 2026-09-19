@@ -65,8 +65,9 @@ test('release database scenario proves one deterministic lifecycle for two paid 
   assert.match(sql, /v2_captain_reply_to_party/i);
   assert.match(sql, /v2_captain_broadcast_to_parties/i);
   assert.match(sql, /journey_broadcast_deliveries/i);
-  assert.match(sql, /interval\s*'4 hours'\s*-\s*interval\s*'1 microsecond'/i);
-  assert.match(sql, /interval\s*'4 hours'/i);
+  assert.match(sql, /local_departure_date\+1[\s\S]*at time zone/i);
+  assert.match(sql, /v_close-interval\s*'1 microsecond'/i);
+  assert.match(sql, /p_as_of=>v_close/i);
   assert.match(sql, /feedback_due_at/i);
   assert.match(sql, /10:00/i);
   assert.match(sql, /template_code\s*=\s*'post_journey_feedback'/i);
