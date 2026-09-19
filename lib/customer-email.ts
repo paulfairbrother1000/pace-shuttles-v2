@@ -1,6 +1,7 @@
 import {createClient} from '@supabase/supabase-js';
 import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';
 import {buildFeedbackEmail} from './feedback-email-content';
+import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';
 
 type JourneyBroadcastMetadata={journey_broadcast_delivery_id:string;pickup_name:string;destination_name:string;captain_name:string;category:JourneyBroadcastCategory;message:string};
 type FeedbackMetadata={first_name:string;country_name:string;pickup_name:string;destination_name:string;feedback_url:string};
@@ -24,9 +25,12 @@ function linkifyCustomerEmailText(body:string){
  return html+nl(esc(body.slice(cursor)));
 }
 
-export function renderCustomerEmailHtml(subject:string,body:string){
+export function renderCustomerEmailHtml(subject:string,body:string,templateCode?:string|null){
  const linked=linkifyCustomerEmailText(body);
- return `<!doctype html><html><body style="margin:0;background:#f4f7f9;font-family:Arial,sans-serif;color:#173042"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" style="max-width:640px;background:#ffffff;border-radius:14px;overflow:hidden"><tr><td style="padding:24px 30px;background:#0877c9;color:#fff"><div style="font-size:24px;font-weight:700">Pace Shuttles</div><div style="margin-top:5px;font-size:14px">Seamless journeys. One booking.</div></td></tr><tr><td style="padding:30px"><h1 style="font-size:24px;margin:0 0 22px">${esc(subject)}</h1><div style="font-size:15px;line-height:1.65">${linked}</div></td></tr><tr><td style="padding:20px 30px;border-top:1px solid #e5edf2;font-size:12px;color:#647681">Pace Shuttles · <a href="https://www.paceshuttles.com/customer" style="color:#0877c9">My Journeys</a> · hello@paceshuttles.com</td></tr></table></td></tr></table></body></html>`;
+ const portal=templateCode==='T72_UNDER_CONSIDERATION'
+  ?'<a href="https://www.paceshuttles.com/operator" style="color:#0877c9">Operator Portal</a>'
+  :'<a href="https://www.paceshuttles.com/customer" style="color:#0877c9">My Journeys</a>';
+ return `<!doctype html><html><body style="margin:0;background:#f4f7f9;font-family:Arial,sans-serif;color:#173042"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" style="max-width:640px;background:#ffffff;border-radius:14px;overflow:hidden"><tr><td style="padding:24px 30px;background:#0877c9;color:#fff"><div style="font-size:24px;font-weight:700">Pace Shuttles</div><div style="margin-top:5px;font-size:14px">Seamless journeys. One booking.</div></td></tr><tr><td style="padding:30px"><h1 style="font-size:24px;margin:0 0 22px">${esc(subject)}</h1><div style="font-size:15px;line-height:1.65">${linked}</div></td></tr><tr><td style="padding:20px 30px;border-top:1px solid #e5edf2;font-size:12px;color:#647681">Pace Shuttles · ${portal} · hello@paceshuttles.com</td></tr></table></td></tr></table></body></html>`;
 }
 
 export async function dispatchDueCustomerEmails(limit=25,deps:CustomerEmailDependencies={}){
@@ -44,8 +48,9 @@ export async function dispatchDueCustomerEmails(limit=25,deps:CustomerEmailDepen
    const broadcast=row.template_code==='journey_broadcast'&&metadata ? buildJourneyBroadcastEmail({pickupName:metadata.pickup_name,destinationName:metadata.destination_name,captainName:metadata.captain_name,category:metadata.category,message:metadata.message}) : null;
    const feedbackMetadata=row.metadata as FeedbackMetadata|undefined;
    const feedback=row.template_code==='post_journey_feedback'&&feedbackMetadata?buildFeedbackEmail({firstName:feedbackMetadata.first_name,countryName:feedbackMetadata.country_name,pickupName:feedbackMetadata.pickup_name,destinationName:feedbackMetadata.destination_name,feedbackUrl:feedbackMetadata.feedback_url}):null;
-   const subject=feedback?.subject||broadcast?.subject||row.subject||'Pace Shuttles update';const text=feedback?.text||broadcast?.text||row.body||'';
-   const response=await fetchImpl('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${resend}`,'Content-Type':'application/json','Idempotency-Key':`pace-notification-${row.notification_id}`},body:JSON.stringify({from:env.RESEND_FROM_EMAIL||'Pace Shuttles <hello@paceshuttles.com>',to:[row.to_email],subject,text,html:renderCustomerEmailHtml(subject,text)})});
+   const t72=row.template_code==='T72_UNDER_CONSIDERATION'&&row.metadata?buildT72OperatorEmail(row.metadata as unknown as T72OperatorEmailInput):null;
+   const subject=t72?.subject||feedback?.subject||broadcast?.subject||row.subject||'Pace Shuttles update';const text=t72?.text||feedback?.text||broadcast?.text||row.body||'';
+   const response=await fetchImpl('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${resend}`,'Content-Type':'application/json','Idempotency-Key':`pace-notification-${row.notification_id}`},body:JSON.stringify({from:env.RESEND_FROM_EMAIL||'Pace Shuttles <hello@paceshuttles.com>',to:[row.to_email],subject,text,html:renderCustomerEmailHtml(subject,text,row.template_code)})});
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(result?.message||result?.error||`Resend returned ${response.status}`);
    const deliveryId=(row.metadata as JourneyBroadcastMetadata|undefined)?.journey_broadcast_delivery_id;

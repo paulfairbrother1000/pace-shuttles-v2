@@ -19,7 +19,8 @@ async function loadCustomerEmail() {
   const source = readFileSync(customerEmailPath, 'utf8')
     .replace("import {createClient} from '@supabase/supabase-js';", '')
     .replace("import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';", "const buildJourneyBroadcastEmail=(input)=>({subject:'Journey update',text:input.message});")
-    .replace("import {buildFeedbackEmail} from './feedback-email-content';", "const buildFeedbackEmail=()=>({subject:'Feedback',text:'Feedback'});");
+    .replace("import {buildFeedbackEmail} from './feedback-email-content';", "const buildFeedbackEmail=()=>({subject:'Feedback',text:'Feedback'});")
+    .replace("import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';", "const buildT72OperatorEmail=(input)=>({subject:'Under consideration',text:input.journeyName});");
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText;
@@ -102,4 +103,15 @@ test('linkifier excludes raw and escaped adjacent closing delimiters from href t
     assert.doesNotMatch(html, new RegExp(`href="${url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[^" ]+"`));
   }
   assert.match(renderCustomerEmailHtml('Directions', `Open ${url}),`), /href="https:\/\/maps\.app\.goo\.gl\/example"/);
+});
+
+test('operator lifecycle emails link to the Operator Portal instead of My Journeys', async () => {
+  const { renderCustomerEmailHtml } = await loadCustomerEmail();
+  const html = renderCustomerEmailHtml(
+    'Journey under consideration',
+    'Review this journey in the Operator Portal.',
+    'T72_UNDER_CONSIDERATION'
+  );
+  assert.match(html, /href="https:\/\/www\.paceshuttles\.com\/operator"[^>]*>Operator Portal<\/a>/);
+  assert.doesNotMatch(html, />My Journeys<\/a>/);
 });
