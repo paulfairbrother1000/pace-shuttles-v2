@@ -21,47 +21,62 @@ async function loadCustomerEmail() {
     .replace("import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';", "const buildJourneyBroadcastEmail=(input)=>({subject:'Journey update',text:input.message});")
     .replace("import {buildFeedbackEmail} from './feedback-email-content';", "const buildFeedbackEmail=()=>({subject:'Feedback',text:'Feedback'});")
     .replace("import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';", "const buildT72OperatorEmail=(input)=>({subject:'Under consideration',text:input.journeyName});")
-    .replace("import {buildCaptainPendingJourneyEmail,type CaptainPendingJourneyEmailInput} from './journey-email-content';", "const buildCaptainPendingJourneyEmail=()=>({subject:'Captain pending',text:'Captain pending'});");
+    .replace("import {buildCaptainPendingJourneyEmail,buildTomorrowJourneyEmail,type CaptainPendingJourneyEmailInput,type TomorrowJourneyEmailInput} from './journey-email-content';", "const buildCaptainPendingJourneyEmail=()=>({subject:'Captain pending',text:'Captain pending'});const buildTomorrowJourneyEmail=()=>({subject:'Tomorrow',text:'Tomorrow'});");
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText;
   return import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`);
 }
 
-test('wet destination reminder includes the approved allocation, directions and wet-arrival advice', async () => {
+test('paired return reminder contains the complete approved itinerary and wet-arrival advice', async () => {
   const { buildTomorrowJourneyEmail } = await loadEmailContent();
   const email = buildTomorrowJourneyEmail({
-    firstName: 'Paul', countryName: 'British Virgin Islands', pickupName: 'Nanny Cay Marina',
-    destinationName: 'The Soggy Dollar', departureLocalLabel: '12:00 PM', arrivalByLocalLabel: '11:45 AM',
-    captainFullName: 'James Williams', captainSurname: 'Williams', vehicleType: 'Speed Boat',
-    vehicleName: 'Sea Runner', pickupDirectionsUrl: 'https://maps.app.goo.gl/example', wetDestination: true
+    firstName: 'Paul', countryName: 'Antigua', pickupName: "St John's",
+    destinationName: 'Nikki Beach', outboundPickupTimeLabel: '10:00 AM',
+    outboundArrivalByTimeLabel: '9:45 AM', returnPickupTimeLabel: '5:00 PM',
+    returnArrivalByTimeLabel: '4:45 PM', adultCount: 2, childCount: 1,
+    infantCount: 0, captainFullName: 'Stevie Steve', captainSurname: 'Steve',
+    vehicleType: 'Speed Boat', vehicleName: 'Silver Lady', wetDestination: true
   });
 
-  assert.equal(email.subject, 'Your Journey to The Soggy Dollar is Tomorrow!');
-  assert.equal(email.text, `Hi Paul,
+  assert.equal(email.subject, "Reminder of Itinerary for St John's to Nikki Beach tomorrow");
+  assert.equal(email.text, `Hi Paul
 
-The time is almost upon us!
+Your Pace Shuttles return journey in Antigua between St John's and Nikki Beach is almost upon us.
 
-Your journey from Nanny Cay Marina to The Soggy Dollar at 12:00 PM is scheduled with Captain James Williams aboard the Speed Boat Sea Runner.
+Your Speed Boat and captain have now been assigned to your trip.
 
-Please arrive at Nanny Cay Marina no later than 11:45 AM.
+Speed Boat:
+Silver Lady
 
-Get directions to your pickup point
-https://maps.app.goo.gl/example
+Captain: Stevie Steve
 
-Please prepare for a wet arrival
+Here is a reminder of your itinerary details.
 
-There is no mooring at The Soggy Dollar, so you will get wet when you disembark. Please bring a towel and any suitable clothing or footwear you may require.
+Party of 2 adults, 1 child and 0 infants
 
-Need to contact your captain on the day of travel?
+Journey 1: St John's to Nikki Beach
 
-Sign in to My Journeys (https://www.paceshuttles.com/customer), select this booking and open Help & Support. Choose Day of Travel, write your message and select Contact captain.
+Pick up time: 10:00 AM
 
-Your captain will receive the message through Pace Shuttles. This secure conversation will remain available until four hours after your journey is completed.
+Please be at the Speed Boat by 9:45 AM
 
-We hope you have a wonderful journey to The Soggy Dollar with Captain Williams.
+Journey 2: Nikki Beach to St John's
 
-Regards,
+Pick up time: 5:00 PM
+
+Please be at the Speed Boat by 4:45 PM
+
+Nikki Beach is a wet arrival destination, meaning you and your party will get wet. Please make sure you have appropriate clothes and a towel with this in mind.
+
+Contacting Us
+
+On the day of the journey, you can contact Captain Steve if necessary using My Journeys > Help & Support > Contact the Captain in the Pace Shuttles portal.
+
+We hope you have a great return trip to Nikki Beach with Captain Steve onboard Silver Lady.
+
+Bon voyage!
+
 The Pace Shuttles Team`);
 });
 
@@ -69,12 +84,14 @@ test('dry destination reminder omits the wet-arrival section', async () => {
   const { buildTomorrowJourneyEmail } = await loadEmailContent();
   const email = buildTomorrowJourneyEmail({
     firstName: 'Paul', countryName: 'British Virgin Islands', pickupName: 'Nanny Cay Marina',
-    destinationName: 'Cane Garden Bay', departureLocalLabel: '12:00 PM', arrivalByLocalLabel: '11:45 AM',
-    captainFullName: 'James Williams', captainSurname: 'Williams', vehicleType: 'Speed Boat',
-    vehicleName: 'Sea Runner', pickupDirectionsUrl: 'https://maps.app.goo.gl/example', wetDestination: false
+    destinationName: 'Cane Garden Bay', outboundPickupTimeLabel: '12:00 PM',
+    outboundArrivalByTimeLabel: '11:45 AM', returnPickupTimeLabel: '5:00 PM',
+    returnArrivalByTimeLabel: '4:45 PM', adultCount: 1, childCount: 0,
+    infantCount: 0, captainFullName: 'James Williams', captainSurname: 'Williams',
+    vehicleType: 'Speed Boat', vehicleName: 'Sea Runner', wetDestination: false
   });
-  assert.doesNotMatch(email.text, /Please prepare for a wet arrival|There is no mooring/);
-  assert.match(email.text, /Get directions to your pickup point\nhttps:\/\/maps\.app\.goo\.gl\/example/);
+  assert.doesNotMatch(email.text, /wet arrival destination|appropriate clothes and a towel/);
+  assert.match(email.text, /Journey 2: Cane Garden Bay to Nanny Cay Marina/);
 });
 
 test('captain-pending reminder gives the customer specific journey and vehicle details without inventing an operational captain', async () => {
@@ -117,15 +134,17 @@ test('customer-provided names are escaped while directions retain a safe exact l
   const [{ buildTomorrowJourneyEmail }, { renderCustomerEmailHtml }] = await Promise.all([loadEmailContent(), loadCustomerEmail()]);
   const email = buildTomorrowJourneyEmail({
     firstName: '<Paul & Co>', countryName: 'British Virgin Islands', pickupName: 'Nanny <Cay>',
-    destinationName: 'The "Soggy" Dollar', departureLocalLabel: '12:00 PM', arrivalByLocalLabel: '11:45 AM',
-    captainFullName: 'James Williams', captainSurname: 'Williams', vehicleType: 'Speed Boat',
-    vehicleName: 'Sea Runner', pickupDirectionsUrl: 'https://maps.app.goo.gl/example', wetDestination: false
+    destinationName: 'The "Soggy" Dollar', outboundPickupTimeLabel: '12:00 PM',
+    outboundArrivalByTimeLabel: '11:45 AM', returnPickupTimeLabel: '5:00 PM',
+    returnArrivalByTimeLabel: '4:45 PM', adultCount: 1, childCount: 0,
+    infantCount: 0, captainFullName: 'James Williams', captainSurname: 'Williams',
+    vehicleType: 'Speed Boat', vehicleName: 'Sea Runner', wetDestination: false
   });
   assert.match(email.subject, /The "Soggy" Dollar/);
-  assert.match(email.text, /Hi <Paul & Co>,/);
+  assert.match(email.text, /Hi <Paul & Co>\n/);
   assert.match(email.text, /Nanny <Cay>/);
   const html = renderCustomerEmailHtml(email.subject, `${email.text}\nSee https://maps.app.goo.gl/example).`);
-  assert.match(html, /Hi &lt;Paul &amp; Co&gt;,/);
+  assert.match(html, /Hi &lt;Paul &amp; Co&gt;<br\/>/);
   assert.match(html, /Nanny &lt;Cay&gt;/);
   assert.match(html, /href="https:\/\/maps\.app\.goo\.gl\/example"/);
   assert.doesNotMatch(html, /href="https:\/\/maps\.app\.goo\.gl\/example\)\./);
