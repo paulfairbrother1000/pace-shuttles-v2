@@ -178,10 +178,11 @@ set local role authenticated;
 do $$ declare v_error text; begin begin perform public.v2_site_admin_reply_journey_conversation((select conversation_a_id from private_journey_messaging_fixture),'must fail before T-24','operational'); exception when others then v_error:=sqlerrm; end; if v_error is distinct from 'journey messaging window is closed' then raise exception 'before-T-24 Site Admin error mismatch: %',v_error; end if; end $$;
 reset role;
 
--- Scheduled-arrival fallback closes exactly at scheduled arrival + 12 hours, exclusively.
-update pace_v2.departures d set scheduled_departure_ts=now()-interval '14 hours',scheduled_arrival_ts=now()-interval '12 hours',t72_ts=now()-interval '86 hours',t24_ts=now()-interval '38 hours',local_departure_date=((now()-interval '14 hours') at time zone d.trip_timezone)::date,actual_arrival_ts=null from private_journey_messaging_fixture f where d.id=f.departure_id;
-do $$ declare v_allocation uuid:=(select allocation_id from private_journey_messaging_fixture); begin
-  if pace_v2.journey_message_closes_at(v_allocation) is distinct from now() or pace_v2.is_journey_message_window_open(v_allocation,now()) then raise exception 'scheduled-arrival fallback close boundary is not exact/exclusive'; end if;
+-- The day after the journey date is closed from local midnight, exclusively.
+update pace_v2.departures d set scheduled_departure_ts=now()-interval '36 hours',scheduled_arrival_ts=now()-interval '34 hours',t72_ts=now()-interval '108 hours',t24_ts=now()-interval '60 hours',local_departure_date=((now() at time zone d.trip_timezone)::date)-1,actual_arrival_ts=null from private_journey_messaging_fixture f where d.id=f.departure_id;
+do $$ declare v_allocation uuid:=(select allocation_id from private_journey_messaging_fixture); v_close timestamptz; begin
+  select (d.local_departure_date+1)::timestamp at time zone d.trip_timezone into v_close from pace_v2.departures d join private_journey_messaging_fixture f on d.id=f.departure_id;
+  if pace_v2.journey_message_closes_at(v_allocation) is distinct from v_close or pace_v2.is_journey_message_window_open(v_allocation,v_close) then raise exception 'local-midnight close boundary is not exact/exclusive'; end if;
 end $$;
 select set_config('request.jwt.claim.sub',(select owner_a_id::text from private_journey_messaging_fixture),true);
 set local role authenticated;
@@ -197,10 +198,11 @@ set local role authenticated;
 do $$ declare v_error text; begin begin perform public.v2_site_admin_reply_journey_conversation((select conversation_a_id from private_journey_messaging_fixture),'must fail at scheduled fallback close','operational'); exception when others then v_error:=sqlerrm; end; if v_error is distinct from 'journey messaging window is closed' then raise exception 'scheduled fallback Site Admin error mismatch: %',v_error; end if; end $$;
 reset role;
 
--- Actual-arrival + 4 hours takes precedence and is also an exclusive close boundary.
-update pace_v2.departures d set scheduled_departure_ts=now()-interval '10 hours',scheduled_arrival_ts=now()-interval '8 hours',t72_ts=now()-interval '82 hours',t24_ts=now()-interval '34 hours',local_departure_date=((now()-interval '10 hours') at time zone d.trip_timezone)::date,actual_arrival_ts=now()-interval '4 hours' from private_journey_messaging_fixture f where d.id=f.departure_id;
-do $$ declare v_allocation uuid:=(select allocation_id from private_journey_messaging_fixture); begin
-  if pace_v2.journey_message_closes_at(v_allocation) is distinct from now() or pace_v2.is_journey_message_window_open(v_allocation,now()) then raise exception 'actual-arrival close boundary is not exact/exclusive'; end if;
+-- Actual arrival never extends the approved local-midnight boundary.
+update pace_v2.departures d set scheduled_departure_ts=now()-interval '36 hours',scheduled_arrival_ts=now()-interval '34 hours',t72_ts=now()-interval '108 hours',t24_ts=now()-interval '60 hours',local_departure_date=((now() at time zone d.trip_timezone)::date)-1,actual_arrival_ts=now()-interval '4 hours' from private_journey_messaging_fixture f where d.id=f.departure_id;
+do $$ declare v_allocation uuid:=(select allocation_id from private_journey_messaging_fixture); v_close timestamptz; begin
+  select (d.local_departure_date+1)::timestamp at time zone d.trip_timezone into v_close from pace_v2.departures d join private_journey_messaging_fixture f on d.id=f.departure_id;
+  if pace_v2.journey_message_closes_at(v_allocation) is distinct from v_close or pace_v2.is_journey_message_window_open(v_allocation,v_close) then raise exception 'actual arrival changed the local-midnight close boundary'; end if;
 end $$;
 select set_config('request.jwt.claim.sub',(select owner_a_id::text from private_journey_messaging_fixture),true);
 set local role authenticated;
