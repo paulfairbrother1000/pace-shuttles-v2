@@ -625,7 +625,7 @@ test('paired messaging closes from Leg 2 completion and never from the outbound-
   assert.doesNotMatch(oneWayProbe,/where allocation\.status='confirmed' and departure\.journey_pair_id is null/i);
   assert.doesNotMatch(oneWayProbe,/journey_pair_mutation_authorized|delete from pace_v2\.journey_pairs|set journey_pair_id=null/i);
   assert.match(fixture,/paired messaging closed before delayed Leg 2 completion/i);
-  assert.match(fixture,/paired messaging did not retain the post-completion window/i);
+  assert.match(fixture,/paired messaging did not close at local midnight after the return journey date/i);
   assert.match(fixture,/one-way messaging close behavior changed/i);
 });
 
