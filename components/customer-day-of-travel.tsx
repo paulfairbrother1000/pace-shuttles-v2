@@ -13,6 +13,11 @@ export type CustomerDayOfTravelActions={
 export type CustomerDayOfTravelLoaders={conversations:()=>Promise<Result<DbRow>>;messages:()=>Promise<Result<DbRow>>;windows:()=>Promise<Result<DbRow>>};
 export const defaultCustomerDayOfTravelLoaders:CustomerDayOfTravelLoaders={conversations:loadCustomerJourneyConversations,messages:loadCustomerJourneyMessages,windows:loadCustomerJourneyMessageWindows};
 export const defaultCustomerDayOfTravelActions:CustomerDayOfTravelActions={open:customerOpenCaptainConversation,send:customerSendCaptainMessage,markRead:markJourneyConversationRead};
+export const CONTACT_CAPTAIN_CATEGORY='contact_captain';
+
+export function ContactCaptainSupportOption({available}:{available:boolean}){
+ return available?<option value={CONTACT_CAPTAIN_CATEGORY}>Contact the Captain</option>:null;
+}
 
 function stateOf(row:any):'scheduled'|'open'|'closed'{return row?.messaging_window_open?'open':row?.messaging_opens_at&&new Date(row.messaging_opens_at).getTime()>Date.now()?'scheduled':'closed'}
 function useRows(loader:()=>Promise<Result<DbRow>>){
@@ -39,5 +44,5 @@ export function CustomerDayOfTravel({booking,loaders=defaultCustomerDayOfTravelL
  if(!conversation&&state==='scheduled')return <p className="data-note">Captain messaging is scheduled to open closer to this journey. Pace Shuttles support remains available below.</p>;
  if(!conversation&&state==='closed')return <p className="data-note">Captain messaging is closed for this booking. Pace Shuttles support remains available below.</p>;
  const identity=conversation?.id||booking.booking_id;
- return <div className="journey-day-of-travel"><h3>Day of Travel</h3><p className="data-note">This is a private conversation with your assigned captain. Journey-wide updates appear here too.</p><JourneyConversation key={identity} threadId={identity} mode="customer" windowState={state} closesAt={(conversation||windowRow)?.messaging_closes_at} messages={privateMessages} busy={busy} onSend={(message)=>send(message)}/>{notice?<p className={notice.includes('sent')?'action-success':'action-error'}>{notice}</p>:null}</div>;
+ return <div className="journey-day-of-travel"><h3>Contact the Captain</h3><p className="data-note">This is a private conversation with your assigned captain. Journey-wide updates appear here too.</p><JourneyConversation key={identity} threadId={identity} mode="customer" windowState={state} closesAt={(conversation||windowRow)?.messaging_closes_at} messages={privateMessages} busy={busy} onSend={(message)=>send(message)}/>{notice?<p className={notice.includes('sent')?'action-success':'action-error'}>{notice}</p>:null}</div>;
 }
