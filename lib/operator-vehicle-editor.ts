@@ -75,6 +75,7 @@ export function validateVehicleDraft(draft:VehicleEditorDraft):Record<string,str
  const capacity=Number(draft.capacitySeats);
  if(!draft.name.trim())errors.name='Enter a vehicle name.';
  if(!draft.vehicleTypeId)errors.vehicleTypeId='Select a Transport Type.';
+ if(draft.active&&!draft.preferredCaptainId)errors.preferredCaptainId='Select an eligible default captain before activating this vehicle.';
  if(!Number.isInteger(capacity)||capacity<1)errors.capacitySeats='Passenger capacity must be a whole number of at least 1.';
  const services=new Set<string>();
  draft.routeOffers.filter(x=>!x.remove).forEach((offer,index)=>{

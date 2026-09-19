@@ -5,7 +5,7 @@ import {adminSaveOperator,adminUploadOperatorLogo,loadCancellationPolicies,loadC
 
 type Props={open:boolean;operator?:any;onClose:()=>void;onSaved:()=>void};
 
-const empty={name:'',email:'',admin_email:'',contact_email:'',notification_email:'',phone:'',address1:'',address2:'',country_id:'',region_id:'',locality_id:'',town:'',region:'',postal_code:'',logo_url:'',cancellation_policy_id:'',vehicle_type_ids:[] as string[],white_label_member:false,active:true};
+const empty={name:'',email:'',admin_email:'',contact_email:'',notification_email:'',phone:'',address1:'',address2:'',country_id:'',region_id:'',locality_id:'',town:'',region:'',postal_code:'',logo_url:'',cancellation_policy_id:'',vehicle_type_ids:[] as string[],white_label_member:false,active:false};
 
 function Field({label,children,hint}:{label:string;children:any;hint?:string}){
  return <label className="form-field"><span>{label}</span>{children}{hint&&<small>{hint}</small>}</label>;
@@ -41,6 +41,6 @@ export function AdminOperatorForm({open,operator,onClose,onSaved}:Props){
   <Field label="Upload logo" hint="JPEG, PNG, WebP or GIF; maximum 8 MB."><input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={e=>setLogoFile(e.target.files?.[0]||null)}/></Field>
   {(logoPreview||form.logo_url)&&<div className="operator-logo-preview"><img src={logoPreview||form.logo_url} alt="Operator logo preview"/></div>}
   <label className="check-row"><input name="white_label_member" type="checkbox" checked={!!form.white_label_member} onChange={e=>set('white_label_member',e.target.checked)}/><span><b>White-label member</b><small>Operator participates in white-label services.</small></span></label>
-  <label className="check-row"><input name="active" type="checkbox" checked={!!form.active} onChange={e=>set('active',e.target.checked)}/><span><b>Active operator</b><small>Available for administration and allocation setup.</small></span></label>
+  <label className="check-row"><input name="active" type="checkbox" checked={!!form.active} onChange={e=>set('active',e.target.checked)}/><span><b>Active operator</b><small>Requires at least one active captain. Add a captain first; the operator owner may be the captain.</small></span></label>
  </div>{error&&<p className="action-error" role="alert">{error}</p>}</div><div className="modal-footer"><button className="btn secondary" disabled={busy} onClick={onClose}>Cancel</button><button className="btn" disabled={busy} onClick={save}>{busy?'Saving…':operator?'Save operator':'Create operator'}</button></div></div></div>;
 }

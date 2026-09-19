@@ -70,6 +70,14 @@ describe('OperatorVehicleEditor',()=>{
   expect(screen.getByRole('alert').textContent).toBe('Cannot save: complete the 2 highlighted required fields.');
  });
 
+ it('requires a captain before an active vehicle can be saved',async()=>{
+  const onSave=setup();const user=userEvent.setup();
+  await user.selectOptions(screen.getByLabelText('Default / preferred captain'),'');
+  await user.click(screen.getByRole('button',{name:'Save changes'}));
+  expect(onSave).not.toHaveBeenCalled();
+  expect(screen.getByText('Select an eligible default captain before activating this vehicle.')).toBeTruthy();
+ });
+
  it('confirms successful save beside the Save button',async()=>{
   setup();const user=userEvent.setup();
   await user.click(screen.getByRole('button',{name:'Save changes'}));

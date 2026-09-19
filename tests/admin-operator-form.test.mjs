@@ -21,6 +21,13 @@ test('operator details reuse the complete form for editing', async () => {
   assert.doesNotMatch(detail, /window\.prompt\('Operator admin email'/);
 });
 
+test('new operators stay inactive until captain coverage is configured', async () => {
+  const form = await readFile(new URL('../components/admin-operator-form.tsx', import.meta.url), 'utf8');
+  assert.match(form, /white_label_member:false,active:false/);
+  assert.match(form, /Requires at least one active captain/);
+  assert.match(form, /owner may be the captain/i);
+});
+
 test('operator logo uploads use the existing images bucket', async () => {
   const data = await readFile(new URL('../lib/data.ts', import.meta.url), 'utf8');
   assert.match(data, /adminUploadOperatorLogo/);
