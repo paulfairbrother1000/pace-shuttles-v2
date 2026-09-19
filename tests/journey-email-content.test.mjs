@@ -20,7 +20,8 @@ async function loadCustomerEmail() {
     .replace("import {createClient} from '@supabase/supabase-js';", '')
     .replace("import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';", "const buildJourneyBroadcastEmail=(input)=>({subject:'Journey update',text:input.message});")
     .replace("import {buildFeedbackEmail} from './feedback-email-content';", "const buildFeedbackEmail=()=>({subject:'Feedback',text:'Feedback'});")
-    .replace("import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';", "const buildT72OperatorEmail=(input)=>({subject:'Under consideration',text:input.journeyName});");
+    .replace("import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';", "const buildT72OperatorEmail=(input)=>({subject:'Under consideration',text:input.journeyName});")
+    .replace("import {buildCaptainPendingJourneyEmail,type CaptainPendingJourneyEmailInput} from './journey-email-content';", "const buildCaptainPendingJourneyEmail=()=>({subject:'Captain pending',text:'Captain pending'});");
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText;
@@ -74,6 +75,42 @@ test('dry destination reminder omits the wet-arrival section', async () => {
   });
   assert.doesNotMatch(email.text, /Please prepare for a wet arrival|There is no mooring/);
   assert.match(email.text, /Get directions to your pickup point\nhttps:\/\/maps\.app\.goo\.gl\/example/);
+});
+
+test('captain-pending reminder gives the customer specific journey and vehicle details without inventing an operational captain', async () => {
+  const { buildCaptainPendingJourneyEmail } = await loadEmailContent();
+  const email = buildCaptainPendingJourneyEmail({
+    firstName: 'Paul', pickupName: "St John's", destinationName: 'Nikki Beach',
+    departureDateLabel: 'Sunday, 20 September 2026', departureLocalLabel: '10:00 AM',
+    arrivalByLocalLabel: '9:45 AM', vehicleType: 'Speed Boat', vehicleName: 'Sea Sea Rider',
+    pickupDirectionsUrl: 'https://maps.app.goo.gl/example', wetDestination: true
+  });
+
+  assert.equal(email.subject, 'Your Pace Shuttles journey is tomorrow – captain confirmation pending');
+  assert.equal(email.text, `Hi Paul,
+
+Your Speed Boat Sea Sea Rider is scheduled for the following journey.
+
+Date: Sunday, 20 September 2026
+Time: 10:00 AM
+Journey: St John's to Nikki Beach
+Vehicle: Speed Boat Sea Sea Rider
+Assigned captain: To be confirmed
+
+We are finalising the captain assignment and will send you an update as soon as it is confirmed. Your booking remains active and no action is required from you.
+
+Please arrive at St John's no later than 9:45 AM.
+
+Get directions to your pickup point
+https://maps.app.goo.gl/example
+
+Please prepare for a wet arrival
+
+There is no mooring at Nikki Beach, so you will get wet when you disembark. Please bring a towel and any suitable clothing or footwear you may require.
+
+Regards,
+The Pace Shuttles Team`);
+  assert.doesNotMatch(email.text, /contact your captain|Captain To be confirmed aboard/i);
 });
 
 test('customer-provided names are escaped while directions retain a safe exact link target', async () => {

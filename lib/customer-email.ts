@@ -2,9 +2,11 @@ import {createClient} from '@supabase/supabase-js';
 import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';
 import {buildFeedbackEmail} from './feedback-email-content';
 import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';
+import {buildCaptainPendingJourneyEmail,type CaptainPendingJourneyEmailInput} from './journey-email-content';
 
 type JourneyBroadcastMetadata={journey_broadcast_delivery_id:string;pickup_name:string;destination_name:string;captain_name:string;category:JourneyBroadcastCategory;message:string};
 type FeedbackMetadata={first_name:string;country_name:string;pickup_name:string;destination_name:string;feedback_url:string};
+type CaptainPendingMetadata={first_name:string;pickup_name:string;destination_name:string;departure_date_label:string;departure_time_label:string;arrival_by_time_label:string;vehicle_type:string;vehicle_name:string;pickup_directions_url:string;wet_destination:boolean};
 type QueuedEmail={notification_id:string;to_email:string;subject:string|null;body:string|null;template_code:string|null;booking_id:string|null;departure_id:string|null;metadata?:JourneyBroadcastMetadata|Record<string,unknown>|null};
 type EmailClient={rpc:(name:string,args?:Record<string,unknown>)=>Promise<any>};
 type CustomerEmailDependencies={env?:Record<string,string|undefined>;createClient?:(url:string,key:string,options:unknown)=>EmailClient;fetchImpl?:typeof fetch};
@@ -49,7 +51,9 @@ export async function dispatchDueCustomerEmails(limit=25,deps:CustomerEmailDepen
    const feedbackMetadata=row.metadata as FeedbackMetadata|undefined;
    const feedback=row.template_code==='post_journey_feedback'&&feedbackMetadata?buildFeedbackEmail({firstName:feedbackMetadata.first_name,countryName:feedbackMetadata.country_name,pickupName:feedbackMetadata.pickup_name,destinationName:feedbackMetadata.destination_name,feedbackUrl:feedbackMetadata.feedback_url}):null;
    const t72=row.template_code==='T72_UNDER_CONSIDERATION'&&row.metadata?buildT72OperatorEmail(row.metadata as unknown as T72OperatorEmailInput):null;
-   const subject=t72?.subject||feedback?.subject||broadcast?.subject||row.subject||'Pace Shuttles update';const text=t72?.text||feedback?.text||broadcast?.text||row.body||'';
+   const pendingMetadata=row.metadata as CaptainPendingMetadata|undefined;
+   const captainPending=row.template_code==='journey_captain_pending'&&pendingMetadata?buildCaptainPendingJourneyEmail({firstName:pendingMetadata.first_name,pickupName:pendingMetadata.pickup_name,destinationName:pendingMetadata.destination_name,departureDateLabel:pendingMetadata.departure_date_label,departureLocalLabel:pendingMetadata.departure_time_label,arrivalByLocalLabel:pendingMetadata.arrival_by_time_label,vehicleType:pendingMetadata.vehicle_type,vehicleName:pendingMetadata.vehicle_name,pickupDirectionsUrl:pendingMetadata.pickup_directions_url,wetDestination:pendingMetadata.wet_destination} satisfies CaptainPendingJourneyEmailInput):null;
+   const subject=t72?.subject||captainPending?.subject||feedback?.subject||broadcast?.subject||row.subject||'Pace Shuttles update';const text=t72?.text||captainPending?.text||feedback?.text||broadcast?.text||row.body||'';
    const response=await fetchImpl('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${resend}`,'Content-Type':'application/json','Idempotency-Key':`pace-notification-${row.notification_id}`},body:JSON.stringify({from:env.RESEND_FROM_EMAIL||'Pace Shuttles <hello@paceshuttles.com>',to:[row.to_email],subject,text,html:renderCustomerEmailHtml(subject,text,row.template_code)})});
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw new Error(result?.message||result?.error||`Resend returned ${response.status}`);

@@ -8,6 +8,7 @@ async function loadDispatcher() {
   const builderPath = new URL('../lib/journey-broadcast-email.ts', import.meta.url);
   const feedbackBuilderPath = new URL('../lib/feedback-email-content.ts', import.meta.url);
   const t72BuilderPath = new URL('../lib/t72-operator-email.ts', import.meta.url);
+  const journeyContentPath = new URL('../lib/journey-email-content.ts', import.meta.url);
   const builder = ts.transpileModule(readFileSync(builderPath, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText.replaceAll('export ', '');
@@ -17,11 +18,15 @@ async function loadDispatcher() {
   const t72Builder = ts.transpileModule(readFileSync(t72BuilderPath, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText.replaceAll('export ', '');
+  const journeyContent = ts.transpileModule(readFileSync(journeyContentPath, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
+  }).outputText.replaceAll('export ', '');
   const source = readFileSync(path, 'utf8')
     .replace("import {createClient} from '@supabase/supabase-js';", '')
     .replace("import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';", builder)
     .replace("import {buildFeedbackEmail} from './feedback-email-content';", feedbackBuilder)
-    .replace("import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';", t72Builder);
+    .replace("import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';", t72Builder)
+    .replace("import {buildCaptainPendingJourneyEmail,type CaptainPendingJourneyEmailInput} from './journey-email-content';", journeyContent);
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText;
@@ -57,6 +62,33 @@ test('T-72 operator notifications are rendered from structured journey, vehicle 
   assert.match(outbound.text, /Assigned captain: Stevie Williams/);
   assert.match(outbound.text, /Saturday, 19 September 2026 at around 10:00 am/);
   assert.match(outbound.html, />Operator Portal<\/a>/);
+});
+
+test('captain-pending notifications are rendered from structured journey and vehicle metadata', async () => {
+  const { dispatchDueCustomerEmails } = await loadDispatcher();
+  let outbound;
+  const pendingRow = {
+    ...row,
+    template_code: 'journey_captain_pending',
+    subject: 'Generic fallback',
+    body: 'Generic fallback',
+    metadata: {
+      first_name: 'Paul', pickup_name: "St John's", destination_name: 'Nikki Beach',
+      departure_date_label: 'Sunday, 20 September 2026', departure_time_label: '10:00 AM',
+      arrival_by_time_label: '9:45 AM', vehicle_type: 'Speed Boat', vehicle_name: 'Sea Sea Rider',
+      pickup_directions_url: 'https://maps.app.goo.gl/example', wet_destination: true
+    }
+  };
+  const result = await dispatchDueCustomerEmails(1, {
+    env,
+    createClient: () => ({ rpc: async (name) => name === 'v2_system_claim_due_customer_emails_with_metadata' ? { data: [pendingRow], error: null } : { error: null } }),
+    fetchImpl: async (_url, request) => { outbound=JSON.parse(request.body); return { ok: true, json: async () => ({ id: 'resend-pending' }) }; }
+  });
+  assert.deepEqual(result, { claimed: 1, sent: 1, failed: 0 });
+  assert.equal(outbound.subject, 'Your Pace Shuttles journey is tomorrow – captain confirmation pending');
+  assert.match(outbound.text, /Vehicle: Speed Boat Sea Sea Rider/);
+  assert.match(outbound.text, /Assigned captain: To be confirmed/);
+  assert.doesNotMatch(outbound.text, /Generic fallback/);
 });
 
 test('accepted Resend retries use the same notification-derived idempotency key', async () => {
