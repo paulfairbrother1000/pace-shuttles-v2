@@ -26,7 +26,7 @@ async function loadDispatcher() {
     .replace("import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';", builder)
     .replace("import {buildFeedbackEmail} from './feedback-email-content';", feedbackBuilder)
     .replace("import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';", t72Builder)
-    .replace("import {buildCaptainPendingJourneyEmail,type CaptainPendingJourneyEmailInput} from './journey-email-content';", journeyContent);
+    .replace("import {buildCaptainPendingJourneyEmail,buildTomorrowJourneyEmail,type CaptainPendingJourneyEmailInput,type TomorrowJourneyEmailInput} from './journey-email-content';", journeyContent);
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText;
@@ -89,6 +89,49 @@ test('captain-pending notifications are rendered from structured journey and veh
   assert.match(outbound.text, /Vehicle: Speed Boat Sea Sea Rider/);
   assert.match(outbound.text, /Assigned captain: To be confirmed/);
   assert.doesNotMatch(outbound.text, /Generic fallback/);
+});
+
+test('confirmed return notifications are rendered from structured paired-itinerary metadata', async () => {
+  const { dispatchDueCustomerEmails } = await loadDispatcher();
+  let outbound;
+  const tomorrowRow = {
+    ...row,
+    subject: 'Generic fallback',
+    body: 'Generic fallback',
+    metadata: {
+      first_name: 'Paul', country_name: 'Antigua', pickup_name: "St John's",
+      destination_name: 'Nikki Beach', outbound_pickup_time_label: '10:00 AM',
+      outbound_arrival_by_time_label: '9:45 AM', return_pickup_time_label: '5:00 PM',
+      return_arrival_by_time_label: '4:45 PM', adult_count: 2, child_count: 1,
+      infant_count: 0, captain_full_name: 'Stevie Steve', captain_surname: 'Steve',
+      vehicle_type: 'Speed Boat', vehicle_name: 'Silver Lady', wet_destination: true
+    }
+  };
+  const result = await dispatchDueCustomerEmails(1, {
+    env,
+    createClient: () => ({ rpc: async (name) => name === 'v2_system_claim_due_customer_emails_with_metadata' ? { data: [tomorrowRow], error: null } : { error: null } }),
+    fetchImpl: async (_url, request) => { outbound=JSON.parse(request.body); return { ok: true, json: async () => ({ id: 'resend-tomorrow' }) }; }
+  });
+  assert.deepEqual(result, { claimed: 1, sent: 1, failed: 0 });
+  assert.equal(outbound.subject, "Reminder of Itinerary for St John's to Nikki Beach tomorrow");
+  assert.match(outbound.text, /Party of 2 adults, 1 child and 0 infants/);
+  assert.match(outbound.text, /Journey 2: Nikki Beach to St John's/);
+  assert.match(outbound.text, /Contact the Captain/);
+  assert.doesNotMatch(outbound.text, /Generic fallback/);
+});
+
+test('one-way tomorrow notifications retain their stored subject and body', async () => {
+  const { dispatchDueCustomerEmails } = await loadDispatcher();
+  let outbound;
+  const oneWayRow = {...row,subject:'Your Journey to Barbuda is Tomorrow!',body:'Stored one-way itinerary',metadata:{minutes_late:0,scheduled_t24_at:'2030-01-01T12:00:00Z'}};
+  const result = await dispatchDueCustomerEmails(1, {
+    env,
+    createClient: () => ({ rpc: async (name) => name === 'v2_system_claim_due_customer_emails_with_metadata' ? { data: [oneWayRow], error: null } : { error: null } }),
+    fetchImpl: async (_url, request) => { outbound=JSON.parse(request.body); return { ok: true, json: async () => ({ id: 'resend-one-way' }) }; }
+  });
+  assert.deepEqual(result,{claimed:1,sent:1,failed:0});
+  assert.equal(outbound.subject,'Your Journey to Barbuda is Tomorrow!');
+  assert.equal(outbound.text,'Stored one-way itinerary');
 });
 
 test('accepted Resend retries use the same notification-derived idempotency key', async () => {

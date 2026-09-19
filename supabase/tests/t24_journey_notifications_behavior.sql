@@ -27,6 +27,7 @@ begin
   join pace_v2.booking_allocations ba on ba.booking_id=b.id
   join pace_v2.confirmed_allocations ca on ca.consideration_id=ba.vehicle_consideration_id and ca.status='confirmed'
   join pace_v2.departures d on d.id=ca.departure_id
+  left join pace_v2.journey_pairs pair on pair.outbound_departure_id=d.id
   join pace_v2.routes r on r.id=d.route_id
   join pace_v2.countries c on c.id=r.country_id and nullif(trim(c.timezone),'') is not null
   join pg_timezone_names tz on tz.name=c.timezone
@@ -40,6 +41,7 @@ begin
   where lower(coalesce(to_jsonb(o)->>'payment_status',to_jsonb(o)->>'status','')) in ('paid','succeeded','complete','completed')
     and lower(coalesce(to_jsonb(b)->>'status','active')) not in ('cancelled','canceled','refunded','inactive')
     and d.status not in ('cancelled','completed')
+    and pair.id is null
     and (select count(distinct a2.id) from pace_v2.captain_assignments a2 join pace_v2.captains cap2 on cap2.id=a2.captain_id and cap2.active and cap2.operator_id=ca.operator_id join pace_v2.captain_vehicle_types cvt2 on cvt2.captain_id=cap2.id and cvt2.vehicle_type_id=v.vehicle_type_id and cvt2.active where a2.confirmed_allocation_id=ca.id and a2.active)=1
   order by b.id,ca.id,a.id limit 1;
   if v_booking_id is null then raise exception 'fixture: paid allocated booking with party-leader email required'; end if;

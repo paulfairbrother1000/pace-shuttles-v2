@@ -12,6 +12,14 @@ function deferred<T>(){let resolve!:(value:T)=>void,reject!:(reason?:unknown)=>v
 afterEach(()=>cleanup());
 
 describe('CustomerDayOfTravel',()=>{
+ it('offers Contact the Captain only while the protected messaging window is open',async()=>{
+  const module:any=await import('./customer-day-of-travel');
+  expect(typeof module.ContactCaptainSupportOption).toBe('function');
+  const open=render(<select aria-label="Support category"><module.ContactCaptainSupportOption available={true}/></select>);
+  expect(screen.getByRole('option',{name:'Contact the Captain'})).toBeTruthy();
+  open.rerender(<select aria-label="Support category"><module.ContactCaptainSupportOption available={false}/></select>);
+  expect(screen.queryByRole('option',{name:'Contact the Captain'})).toBeNull();
+ });
  it('opens a first private contact only in the protected open window',async()=>{
   const act=actions();render(<CustomerDayOfTravel booking={{booking_id:'booking-a'}} loaders={loaders([{booking_id:'booking-a',messaging_window_open:true}])} actions={act}/>);
   await userEvent.setup().type(await screen.findByLabelText('Message'),'At the dock');

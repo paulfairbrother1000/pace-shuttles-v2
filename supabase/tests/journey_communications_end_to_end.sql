@@ -185,20 +185,24 @@ do $$ declare v_visible integer; begin
 end $$;
 reset role;
 
--- Record actual completion. The authority stays open until one microsecond before
--- completion +4h and is closed at the exact +4h boundary.
+-- Record actual completion. The authority remains open until one microsecond
+-- before local midnight after the journey date and closes at midnight.
 update journey_communications_e2e_fixture set completion_ts=now()-interval '1 second';
 update pace_v2.departures d set actual_arrival_ts=f.completion_ts
 from journey_communications_e2e_fixture f where d.id=f.departure_id;
-do $$ begin
+do $$ declare v_close timestamptz; begin
+  select (d.local_departure_date+1)::timestamp at time zone d.trip_timezone
+  into v_close
+  from pace_v2.departures d
+  join journey_communications_e2e_fixture f on d.id=f.departure_id;
   if not pace_v2.is_journey_message_window_open(
     p_confirmed_allocation_id=>(select allocation_id from journey_communications_e2e_fixture),
-    p_as_of=>(select completion_ts+interval '4 hours'-interval '1 microsecond' from journey_communications_e2e_fixture)
-  ) then raise exception 'messaging closed before actual completion +4h'; end if;
+    p_as_of=>v_close-interval '1 microsecond'
+  ) then raise exception 'messaging closed before local midnight'; end if;
   if pace_v2.is_journey_message_window_open(
     p_confirmed_allocation_id=>(select allocation_id from journey_communications_e2e_fixture),
-    p_as_of=>(select completion_ts+interval '4 hours' from journey_communications_e2e_fixture)
-  ) then raise exception 'messaging remained open at actual completion +4h'; end if;
+    p_as_of=>v_close
+  ) then raise exception 'messaging remained open at local midnight'; end if;
 end $$;
 
 -- Feedback becomes due at 10:00 on the next America/Antigua local calendar day.

@@ -1396,8 +1396,7 @@ begin
     from captain_today_fixture fixture
     join pace_v2.confirmed_allocations allocation on allocation.id=fixture.allocation_id
     returning id into v_one_way_allocation_id;
-    select coalesce(departure.actual_arrival_ts+interval '4 hours',
-      departure.scheduled_arrival_ts+interval '12 hours')
+    select (departure.local_departure_date+1)::timestamp at time zone departure.trip_timezone
       into v_expected
     from pace_v2.departures departure where departure.id=v_one_way_departure_id;
     if pace_v2.journey_message_closes_at(v_one_way_allocation_id) is distinct from v_expected then
@@ -2121,8 +2120,12 @@ do $$ declare v_actual integer; v_expected integer; begin
     raise exception 'secondary finalization feedback delta expected %, got %',v_expected,v_actual;
   end if;
   if pace_v2.journey_message_closes_at((select allocation_id from captain_today_fixture))
-       is distinct from (select end_2+interval '4 hours' from captain_today_fixture) then
-    raise exception 'paired messaging did not retain the post-completion window';
+       is distinct from (
+         select (departure.local_departure_date+1)::timestamp at time zone departure.trip_timezone
+         from pace_v2.departures departure
+         join captain_today_fixture fixture on departure.id=fixture.return_id
+       ) then
+    raise exception 'paired messaging did not close at local midnight after the return journey date';
   end if;
   if exists(select 1 from pace_v2.confirmed_allocations ca join captain_today_fixture f on ca.departure_id=f.return_id)
      or exists(select 1 from pace_v2.bookings b join captain_today_fixture f on b.departure_id=f.return_id)

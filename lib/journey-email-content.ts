@@ -1,8 +1,10 @@
 export type TomorrowJourneyEmailInput = {
   firstName:string; countryName:string; pickupName:string; destinationName:string;
-  departureLocalLabel:string; arrivalByLocalLabel:string; captainFullName:string;
-  captainSurname:string; vehicleType:string; vehicleName:string;
-  pickupDirectionsUrl:string; wetDestination:boolean;
+  outboundPickupTimeLabel:string; outboundArrivalByTimeLabel:string;
+  returnPickupTimeLabel:string; returnArrivalByTimeLabel:string;
+  adultCount:number; childCount:number; infantCount:number;
+  captainFullName:string; captainSurname:string; vehicleType:string;
+  vehicleName:string; wetDestination:boolean;
 };
 
 export type CaptainPendingJourneyEmailInput = {
@@ -14,11 +16,14 @@ export type CaptainPendingJourneyEmailInput = {
 
 export function buildTomorrowJourneyEmail(input:TomorrowJourneyEmailInput):{subject:string;text:string}{
   const wet = input.wetDestination
-    ? `\n\nPlease prepare for a wet arrival\n\nThere is no mooring at ${input.destinationName}, so you will get wet when you disembark. Please bring a towel and any suitable clothing or footwear you may require.`
+    ? `\n\n${input.destinationName} is a wet arrival destination, meaning you and your party will get wet. Please make sure you have appropriate clothes and a towel with this in mind.`
     : '';
+  const adults=`${input.adultCount} ${input.adultCount===1?'adult':'adults'}`;
+  const children=`${input.childCount} ${input.childCount===1?'child':'children'}`;
+  const infants=`${input.infantCount} ${input.infantCount===1?'infant':'infants'}`;
   return {
-    subject: `Your Journey to ${input.destinationName} is Tomorrow!`,
-    text: `Hi ${input.firstName},\n\nThe time is almost upon us!\n\nYour journey from ${input.pickupName} to ${input.destinationName} at ${input.departureLocalLabel} is scheduled with Captain ${input.captainFullName} aboard the ${input.vehicleType} ${input.vehicleName}.\n\nPlease arrive at ${input.pickupName} no later than ${input.arrivalByLocalLabel}.\n\nGet directions to your pickup point\n${input.pickupDirectionsUrl}${wet}\n\nNeed to contact your captain on the day of travel?\n\nSign in to My Journeys (https://www.paceshuttles.com/customer), select this booking and open Help & Support. Choose Day of Travel, write your message and select Contact captain.\n\nYour captain will receive the message through Pace Shuttles. This secure conversation will remain available until four hours after your journey is completed.\n\nWe hope you have a wonderful journey to ${input.destinationName} with Captain ${input.captainSurname}.\n\nRegards,\nThe Pace Shuttles Team`
+    subject: `Reminder of Itinerary for ${input.pickupName} to ${input.destinationName} tomorrow`,
+    text: `Hi ${input.firstName}\n\nYour Pace Shuttles return journey in ${input.countryName} between ${input.pickupName} and ${input.destinationName} is almost upon us.\n\nYour ${input.vehicleType} and captain have now been assigned to your trip.\n\n${input.vehicleType}:\n${input.vehicleName}\n\nCaptain: ${input.captainFullName}\n\nHere is a reminder of your itinerary details.\n\nParty of ${adults}, ${children} and ${infants}\n\nJourney 1: ${input.pickupName} to ${input.destinationName}\n\nPick up time: ${input.outboundPickupTimeLabel}\n\nPlease be at the ${input.vehicleType} by ${input.outboundArrivalByTimeLabel}\n\nJourney 2: ${input.destinationName} to ${input.pickupName}\n\nPick up time: ${input.returnPickupTimeLabel}\n\nPlease be at the ${input.vehicleType} by ${input.returnArrivalByTimeLabel}${wet}\n\nContacting Us\n\nOn the day of the journey, you can contact Captain ${input.captainSurname} if necessary using My Journeys > Help & Support > Contact the Captain in the Pace Shuttles portal.\n\nWe hope you have a great return trip to ${input.destinationName} with Captain ${input.captainSurname} onboard ${input.vehicleName}.\n\nBon voyage!\n\nThe Pace Shuttles Team`
   };
 }
 
