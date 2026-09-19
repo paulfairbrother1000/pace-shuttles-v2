@@ -66,22 +66,31 @@ begin
   update pace_v2.departures set
     scheduled_departure_ts='2030-01-02 12:00:00+00',
     scheduled_arrival_ts='2030-01-02 14:00:00+00',
+    trip_timezone='UTC',
+    local_departure_date='2030-01-02',
     actual_arrival_ts=null
   where id=v_departure_id;
 
+  update pace_v2.departures return_leg set
+    trip_timezone='UTC',
+    local_departure_date='2030-01-02'
+  from pace_v2.journey_pairs pair
+  where pair.outbound_departure_id=v_departure_id
+    and return_leg.id=pair.return_departure_id;
+
   if pace_v2.journey_message_opens_at(v_allocation_id) <> '2030-01-01 12:00:00+00'::timestamptz
-    or pace_v2.journey_message_closes_at(v_allocation_id) <> '2030-01-03 02:00:00+00'::timestamptz
+    or pace_v2.journey_message_closes_at(v_allocation_id) <> '2030-01-03 00:00:00+00'::timestamptz
     or pace_v2.is_journey_message_window_open(v_allocation_id,'2030-01-01 11:59:59+00')
     or not pace_v2.is_journey_message_window_open(v_allocation_id,'2030-01-01 12:00:00+00')
-    or pace_v2.is_journey_message_window_open(v_allocation_id,'2030-01-03 02:00:00+00') then
-    raise exception 'T-24 and missing-completion message window boundaries are incorrect';
+    or pace_v2.is_journey_message_window_open(v_allocation_id,'2030-01-03 00:00:00+00') then
+    raise exception 'T-24 and local-midnight message window boundaries are incorrect';
   end if;
 
   update pace_v2.departures set actual_arrival_ts='2030-01-02 15:30:00+00' where id=v_departure_id;
-  if pace_v2.journey_message_closes_at(v_allocation_id) <> '2030-01-02 19:30:00+00'::timestamptz
-    or not pace_v2.is_journey_message_window_open(v_allocation_id,'2030-01-02 19:29:59+00')
-    or pace_v2.is_journey_message_window_open(v_allocation_id,'2030-01-02 19:30:00+00') then
-    raise exception 'actual-arrival message window boundary is incorrect';
+  if pace_v2.journey_message_closes_at(v_allocation_id) <> '2030-01-03 00:00:00+00'::timestamptz
+    or not pace_v2.is_journey_message_window_open(v_allocation_id,'2030-01-02 23:59:59+00')
+    or pace_v2.is_journey_message_window_open(v_allocation_id,'2030-01-03 00:00:00+00') then
+    raise exception 'actual arrival changed the local-midnight boundary';
   end if;
 
   v_rejected:=false;
