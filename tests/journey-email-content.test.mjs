@@ -21,6 +21,7 @@ async function loadCustomerEmail() {
     .replace("import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';", "const buildJourneyBroadcastEmail=(input)=>({subject:'Journey update',text:input.message});")
     .replace("import {buildFeedbackEmail} from './feedback-email-content';", "const buildFeedbackEmail=()=>({subject:'Feedback',text:'Feedback'});")
     .replace("import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';", "const buildT72OperatorEmail=(input)=>({subject:'Under consideration',text:input.journeyName});")
+    .replace("import {buildT24OperatorEmail,type T24OperatorEmailInput} from './t24-operator-email';", "const buildT24OperatorEmail=()=>({subject:'Confirmed',text:'Confirmed',html:'Confirmed'});")
     .replace("import {buildCaptainPendingJourneyEmail,buildTomorrowJourneyEmail,type CaptainPendingJourneyEmailInput,type TomorrowJourneyEmailInput} from './journey-email-content';", "const buildCaptainPendingJourneyEmail=()=>({subject:'Captain pending',text:'Captain pending'});const buildTomorrowJourneyEmail=()=>({subject:'Tomorrow',text:'Tomorrow'});");
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
