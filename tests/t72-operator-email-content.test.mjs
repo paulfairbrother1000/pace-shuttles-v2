@@ -1,9 +1,17 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
 import ts from 'typescript';
 
 const modulePath = new URL('../lib/t72-operator-email.ts', import.meta.url);
+const migrationsPath = new URL('../supabase/migrations/', import.meta.url);
+
+function reservationMigration(){
+  const migrationName=readdirSync(migrationsPath)
+    .find(name=>name.endsWith('_captain_duty_reservations.sql'));
+  assert.ok(migrationName,'captain duty reservations migration must exist');
+  return readFileSync(new URL(migrationName,migrationsPath),'utf8');
+}
 
 async function loadBuilder() {
   assert.equal(existsSync(modulePath), true, 'T-72 operator email builder is missing');
@@ -70,4 +78,17 @@ test('an under-consideration email cannot be built without a named captain', asy
     ...journey,
     vehicles: [{ vehicleType: 'Speed Boat', vehicleName: 'Silver Lady', captainName: '' }]
   }), /captain/i);
+});
+
+test('T-72 communications include only held vehicles and use the reserved captain',()=>{
+  const sql=reservationMigration();
+
+  assert.match(
+    sql,
+    /create or replace function pace_v2\.process_departure_t72[\s\S]*captain_duty_reservations[\s\S]*state='held_t72'/i,
+  );
+  assert.match(
+    sql,
+    /create or replace function pace_v2\.queue_informative_t72_operator_email[\s\S]*captain_duty_reservations[\s\S]*reservation\.state='held_t72'[\s\S]*captain\.id=reservation\.captain_id/i,
+  );
 });

@@ -34,3 +34,22 @@ test('admin conflict projection authorizes only a checked Site Admin helper',()=
   assert.match(sql,/grant execute on function pace_v2\.site_admin_conflicting_departure_id\(uuid,uuid\)[\s\S]*to authenticated/i);
   assert.match(sql,/pace_v2\.site_admin_conflicting_departure_id\(vc\.departure_id,vc\.vehicle_id\)[\s\S]*as conflicting_departure_id/i);
 });
+
+test('admin projection exposes private captain reservation evidence without contact data',()=>{
+  const migrationName=fs.readdirSync(migrationsDir)
+    .find(name=>name.endsWith('_captain_duty_reservations.sql'));
+  assert.ok(migrationName,'captain duty reservations migration must exist');
+  const sql=fs.readFileSync(path.join(migrationsDir,migrationName),'utf8');
+
+  assert.match(sql,/create or replace view public\.v2_admin_vehicle_considerations/i);
+  for(const column of [
+    'captain_resource_state','captain_resource_reason',
+    'captain_id_reserved','captain_conflicting_departure_id',
+  ]) assert.match(sql,new RegExp(`as ${column}`,'i'));
+  assert.doesNotMatch(
+    sql.match(/create or replace view public\.v2_admin_vehicle_considerations[\s\S]*?;/i)?.[0]||'',
+    /captain_(?:email|phone)|captain\.email|captain\.phone/i,
+  );
+  assert.match(sql,/where pace_v2\.is_site_admin\(\)/i);
+  assert.match(sql,/revoke all on pace_v2\.captain_duty_reservations from public,anon,authenticated/i);
+});

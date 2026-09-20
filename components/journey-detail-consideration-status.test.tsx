@@ -43,6 +43,37 @@ const loaders=vi.hoisted(()=>({
       quality_score_snapshot:50,withdrawal_deadline_ts:'2026-09-20T14:00:00Z',
       t72_discarded_at:'2026-09-18T14:00:01Z',
     },
+    {
+      consideration_id:'captain-conflict',departure_id:departureId,
+      operator_name:'Barefoot',vehicle_name:'Conflict Boat',status:'discarded_t72',
+      captain_resource_reason:'captain_conflict',captain_resource_state:null,
+      captain_conflicting_departure_id:'conflicting-departure-id',
+      normal_min_seats:4,max_seats:10,min_revenue_cents:50000,
+    },
+    {
+      consideration_id:'no-captain',departure_id:departureId,
+      operator_name:'Barefoot',vehicle_name:'No Captain Boat',status:'discarded_t72',
+      captain_resource_reason:'no_eligible_captain',
+      normal_min_seats:4,max_seats:10,min_revenue_cents:50000,
+    },
+    {
+      consideration_id:'inactive-captain',departure_id:departureId,
+      operator_name:'Barefoot',vehicle_name:'Inactive Captain Boat',status:'discarded_t72',
+      captain_resource_reason:'captain_inactive',
+      normal_min_seats:4,max_seats:10,min_revenue_cents:50000,
+    },
+    {
+      consideration_id:'ineligible-captain',departure_id:departureId,
+      operator_name:'Barefoot',vehicle_name:'Ineligible Captain Boat',status:'discarded_t72',
+      captain_resource_reason:'captain_ineligible',
+      normal_min_seats:4,max_seats:10,min_revenue_cents:50000,
+    },
+    {
+      consideration_id:'held-captain',departure_id:departureId,
+      operator_name:'Barefoot',vehicle_name:'Held Boat',status:'under_consideration',
+      captain_resource_state:'held_t72',captain_resource_reason:null,
+      normal_min_seats:4,max_seats:10,min_revenue_cents:50000,
+    },
   ],error:null})),
 }));
 
@@ -64,5 +95,17 @@ describe('JourneyDetail vehicle availability reasons',()=>{
     });
     expect(conflictLink.getAttribute('href')).toBe(`/admin/journeys/${conflictingDepartureId}`);
     await waitFor(()=>expect(screen.getByText('DISCARDED T72')).toBeTruthy());
+  });
+
+  it('shows reason-specific captain availability evidence',async()=>{
+    render(<JourneyDetail id={departureId}/>);
+
+    expect(await screen.findByText('UNAVAILABLE — captain reserved elsewhere')).toBeTruthy();
+    expect(screen.getByRole('link',{name:/view conflicting journey/i}).getAttribute('href'))
+      .toBe('/admin/journeys/conflicting-departure-id');
+    expect(screen.getByText('No eligible captain')).toBeTruthy();
+    expect(screen.getByText('Captain inactive')).toBeTruthy();
+    expect(screen.getByText('Captain no longer eligible')).toBeTruthy();
+    expect(screen.getByText('Held for this journey')).toBeTruthy();
   });
 });

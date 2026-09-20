@@ -27,7 +27,14 @@ function AdminJourneyActions({journey,allocations,bookings,onChanged}:{journey:a
 }
 function decisionLabel(c:any){const s=String(c.status||'').toLowerCase();if(s==='cancelled'||s==='discarded_t72')return c.t72_discarded_at?'Released at T-72':'Not selected at T-24';if(s==='confirmed')return 'Confirmed at T-24';if(s==='under_consideration')return 'Under consideration';return String(c.status||'—').replaceAll('_',' ')}
 function decisionReason(c:any){const s=String(c.status||'').toLowerCase();if(s==='confirmed')return `${c.assigned_seats||0} seats · ${money(c.assigned_revenue_cents||0)} assigned against ${money(c.min_revenue_cents||0)} minimum revenue`;if(c.t72_discarded_at)return 'Released during the T-72 allocation evaluation';if(s==='cancelled')return 'Vehicle was not selected in the final T-24 allocation';return `${c.assigned_seats||0} seats currently assigned · minimum ${c.normal_min_seats||0}, maximum ${c.max_seats||0}`}
-function considerationStatus(c:any){
+export function considerationStatus(c:any){
+ const captainReason=String(c.captain_resource_reason||'');
+ const captainConflictId=String(c.captain_conflicting_departure_id||'');
+ if(captainReason==='captain_conflict')return <><Status value="UNAVAILABLE — captain reserved elsewhere"/>{captainConflictId&&<> · <Link aria-label="View conflicting journey" className="consideration-conflict-link" href={`/admin/journeys/${captainConflictId}`}>View conflicting journey</Link></>}</>;
+ if(captainReason==='no_eligible_captain')return <Status value="No eligible captain"/>;
+ if(captainReason==='captain_inactive')return <Status value="Captain inactive"/>;
+ if(captainReason==='captain_ineligible')return <Status value="Captain no longer eligible"/>;
+ if(String(c.captain_resource_state||'')==='held_t72')return <Status value="Held for this journey"/>;
  const conflictId=String(c.conflicting_departure_id||'');
  if(conflictId)return <Link className="consideration-conflict-link" href={`/admin/journeys/${conflictId}`}><Status value="UNAVAILABLE"/> — allocated to {conflictId.slice(0,8)}</Link>;
  return <Status value={String(c.status||'eligible').replaceAll('_',' ').toUpperCase()}/>;

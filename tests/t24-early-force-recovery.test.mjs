@@ -7,6 +7,13 @@ const migrationUrl = new URL(
   import.meta.url,
 );
 const migration = existsSync(migrationUrl) ? readFileSync(migrationUrl, 'utf8') : '';
+const reservationMigrationUrl = new URL(
+  '../supabase/migrations/20260919230203_captain_duty_reservations.sql',
+  import.meta.url,
+);
+const reservationMigration = existsSync(reservationMigrationUrl)
+  ? readFileSync(reservationMigrationUrl,'utf8')
+  : '';
 
 test('a genuine T-24 run reclaims an early forced scheduler record', () => {
   assert.ok(migration, 'early forced T-24 recovery migration is missing');
@@ -29,4 +36,14 @@ test('T-24 stops safely for manual review when confirmed boats outnumber eligibl
   assert.match(migration, /captain_vehicle_types/i);
   assert.match(migration, /status='at_risk'/i);
   assert.match(migration, /T24_CUSTOMER_ACTION_REQUIRED/i);
+});
+
+test('T-24 rematches held captains before creating confirmed allocations',()=>{
+  assert.ok(reservationMigration,'captain reservation migration is missing');
+  const confirm=reservationMigration.match(
+    /create or replace function pace_v2\.confirm_departure_t24[\s\S]*?\n\$\$;/i,
+  )?.[0]||'';
+  assert.match(confirm,/reconcile_departure_captain_reservations/i);
+  assert.match(confirm,/T24_INSUFFICIENT_CAPTAINS/i);
+  assert.match(confirm,/confirm_departure_t24_commercial/i);
 });

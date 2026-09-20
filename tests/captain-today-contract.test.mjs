@@ -4,6 +4,18 @@ import test from 'node:test';
 
 const migrationPath='supabase/migrations/20260902031500_captain_duties_and_return_legs.sql';
 const fixturePath='supabase/tests/captain_duties_and_return_legs_contract.sql';
+const reservationMigrationPath='supabase/migrations/20260919230203_captain_duty_reservations.sql';
+
+test('paired captain reservations release only when the final leg is terminal',()=>{
+  const sql=readFileSync(reservationMigrationPath,'utf8');
+  const triggerFunction=sql.match(
+    /create or replace function pace_v2\.release_terminal_departure_captain_reservations\(\)[\s\S]*?\n\$\$;/i,
+  )?.[0]||'';
+  assert.match(triggerFunction,/final_departure_id/i);
+  assert.match(triggerFunction,/new\.id=resource\.final_departure_id/i);
+  assert.match(triggerFunction,/new\.status='completed'/i);
+  assert.match(triggerFunction,/new\.status in\('cancelled','closed_unrecorded'\)/i);
+});
 
 test('live departure timestamp drift is repaired before the migration references it',()=>{
   const sql=readFileSync(migrationPath,'utf8');
