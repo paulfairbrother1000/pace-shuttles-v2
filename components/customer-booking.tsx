@@ -577,7 +577,7 @@ export default function CustomerBooking() {
             <div className="ps-empty">No journeys match those choices yet. Try another available date or pick-up point.</div>
           ) : (
             <div className="ps-results">
-              {filtered.map((x, index) => {
+              {filtered.map((x) => {
                 const q = x,
                   party = partyFor(x.departure_id),
                   loadingPrice = q.quote_status === 'check_price' || q.quote_status === 'loading_price',
@@ -592,10 +592,10 @@ export default function CustomerBooking() {
                   destinationLocation = catalogDests.find((d: any) => d.id === x.destination_id) || {name:x.destination_name,picture_url:x.destination_picture_url,description:x.destination_description,kind:'Destination'};
                 return (
                   <article className="ps-journey" key={x.departure_id}>
-                    <span className="ps-journey-option">Journey option {index + 1}</span>
                     <div className="ps-route-images">
                       <LocationImageButton location={pickupLocation} onOpen={()=>setLocationInfo(pickupLocation)}/>
                       <LocationImageButton location={destinationLocation} onOpen={()=>setLocationInfo(destinationLocation)}/>
+                      <span className="ps-image-detail-hint">Click images for details</span>
                     </div>
                     <div className="ps-journey-main">
                       <div>

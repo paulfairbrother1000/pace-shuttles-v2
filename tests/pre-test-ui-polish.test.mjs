@@ -11,12 +11,13 @@ test('the public header removes the redundant Book navigation control',()=>{
  assert.match(nav,/href="\/customer"[\s\S]*>My journeys</);
 });
 
-test('journey results have numbered option labels and clearer mobile card separation',()=>{
+test('journey results use one image-pair detail hint and retain clear mobile card separation',()=>{
  const source=readFileSync('components/customer-booking.tsx','utf8');
  const css=readFileSync('app/globals.css','utf8');
- assert.match(source,/filtered\.map\(\(x,\s*index\)/);
- assert.match(source,/className="ps-journey-option"[^>]*>\s*Journey option \{index\s*\+\s*1\}/);
- assert.match(css,/\.ps-journey-option\s*\{/);
+ assert.doesNotMatch(source,/Journey option|ps-journey-option/);
+ assert.match(source,/className="ps-image-detail-hint"[^>]*>Click images for details</);
+ assert.doesNotMatch(css,/content:'View details'/);
+ assert.match(css,/\.ps-image-detail-hint\s*\{/);
  assert.match(css,/@media\(max-width:700px\)[\s\S]*\.ps-results\s*\{[^}]*gap:\s*2[04]px/i);
  assert.match(css,/@media\(max-width:700px\)[\s\S]*\.ps-journey\s*\{[^}]*box-shadow:/i);
 });
