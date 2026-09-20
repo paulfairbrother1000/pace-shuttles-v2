@@ -19,7 +19,7 @@ end $$;
 do $$
 declare
   v_booking_id uuid; v_departure_id uuid; v_pickup_id uuid; v_captain_id uuid; v_as_of timestamptz:='2030-01-01 12:00:00+00';
-  v_original_directions text; v_original_first_name text; v_original_last_name text; v_count integer; v_late integer; v_bad_directions text;
+  v_original_directions text; v_original_arrival_notes text; v_original_first_name text; v_original_last_name text; v_count integer; v_late integer; v_bad_directions text;
 begin
   select b.id,d.id,pp.id,cap.id into v_booking_id,v_departure_id,v_pickup_id,v_captain_id
   from pace_v2.bookings b
@@ -46,10 +46,10 @@ begin
   order by b.id,ca.id,a.id limit 1;
   if v_booking_id is null then raise exception 'fixture: paid allocated booking with party-leader email required'; end if;
 
-  select directions_url into v_original_directions from pace_v2.pickup_points where id=v_pickup_id;
+  select directions_url,arrival_notes into v_original_directions,v_original_arrival_notes from pace_v2.pickup_points where id=v_pickup_id;
   select first_name,last_name into v_original_first_name,v_original_last_name from pace_v2.captains where id=v_captain_id;
   update pace_v2.bookings set customer_name='Paul Leader' where id=v_booking_id;
-  update pace_v2.pickup_points set directions_url='https://maps.app.goo.gl/t24fixture' where id=v_pickup_id;
+  update pace_v2.pickup_points set directions_url='https://maps.app.goo.gl/t24fixture',arrival_notes='Meet beside the test pier.' where id=v_pickup_id;
   update pace_v2.departures set scheduled_departure_ts=v_as_of+interval '24 hours',scheduled_arrival_ts=v_as_of+interval '26 hours' where id=v_departure_id;
   delete from pace_v2.notifications where booking_id=v_booking_id and template_code='journey_tomorrow';
   delete from pace_v2.operational_alerts where exception_key='t24_details_overdue:'||v_booking_id::text;
@@ -63,6 +63,11 @@ begin
   if v_count<>1 then raise exception 'T-24 duplicate prevention failed: expected 1 queue row, got %',v_count; end if;
 
   delete from pace_v2.notifications where booking_id=v_booking_id and template_code='journey_tomorrow';
+  update pace_v2.pickup_points set arrival_notes=null where id=v_pickup_id;
+  perform public.v2_system_schedule_t24_journey_notifications(v_as_of+interval '5 minutes');
+  if exists(select 1 from pace_v2.notifications where booking_id=v_booking_id and template_code='journey_tomorrow') or not exists(select 1 from pace_v2.operational_alerts where exception_key='t24_details_overdue:'||v_booking_id::text and (details->'missing') ? 'missing pickup instructions' and resolved_at is null) then raise exception 'missing pickup instructions were not withheld and alerted'; end if;
+  update pace_v2.pickup_points set arrival_notes='Meet beside the test pier.' where id=v_pickup_id;
+
   foreach v_bad_directions in array array['http://example.com/not-google','https://google.com.evil/maps','https://maps.google.invalid/path'] loop
     update pace_v2.pickup_points set directions_url=v_bad_directions where id=v_pickup_id;
     perform public.v2_system_schedule_t24_journey_notifications(v_as_of+interval '10 minutes');
@@ -89,7 +94,7 @@ begin
   update pace_v2.captains set last_name=v_original_last_name where id=v_captain_id;
   perform public.v2_system_schedule_t24_journey_notifications(v_as_of+interval '60 minutes');
   if not exists(select 1 from pace_v2.notifications where booking_id=v_booking_id and template_code='journey_tomorrow') or exists(select 1 from pace_v2.operational_alerts where exception_key='t24_details_overdue:'||v_booking_id::text and resolved_at is null) then raise exception 'corrected captain details did not queue and resolve immediately'; end if;
-  update pace_v2.pickup_points set directions_url=v_original_directions where id=v_pickup_id;
+  update pace_v2.pickup_points set directions_url=v_original_directions,arrival_notes=v_original_arrival_notes where id=v_pickup_id;
 end $$;
 
 rollback;

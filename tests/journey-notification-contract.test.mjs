@@ -60,6 +60,7 @@ test('SQL behavior fixture invokes the scheduler and asserts queue, exception, r
   assert.match(behavior, /update pace_v2\.captains set first_name=''/i);
   assert.match(behavior, /last_name=''/i);
   assert.match(behavior, /missing captain last name was not withheld and alerted/i);
+  assert.match(behavior, /missing pickup instructions were not withheld and alerted/i);
   assert.match(behavior, /v_as_of-interval '1 second'/i);
   assert.match(behavior, /T-24 queued or alerted before its due time/i);
   assert.match(behavior, /captain_vehicle_types cvt/i);

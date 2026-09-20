@@ -104,7 +104,9 @@ test('confirmed return notifications are rendered from structured paired-itinera
       outbound_arrival_by_time_label: '9:45 AM', return_pickup_time_label: '5:00 PM',
       return_arrival_by_time_label: '4:45 PM', adult_count: 2, child_count: 1,
       infant_count: 0, captain_full_name: 'Stevie Steve', captain_surname: 'Steve',
-      vehicle_type: 'Speed Boat', vehicle_name: 'Silver Lady', wet_destination: true
+      vehicle_type: 'Speed Boat', vehicle_name: 'Silver Lady', wet_destination: true,
+      pickup_arrival_notes: 'Meet on pier 3 next to the record shop.',
+      pickup_directions_url: 'https://maps.app.goo.gl/example'
     }
   };
   const result = await dispatchDueCustomerEmails(1, {
@@ -114,9 +116,12 @@ test('confirmed return notifications are rendered from structured paired-itinera
   });
   assert.deepEqual(result, { claimed: 1, sent: 1, failed: 0 });
   assert.equal(outbound.subject, "Reminder of Itinerary for St John's to Nikki Beach tomorrow");
-  assert.match(outbound.text, /Party of 2 adults, 1 child and 0 infants/);
+  assert.match(outbound.text, /Party of 2 adults and 1 child/);
+  assert.doesNotMatch(outbound.text, /0 infants/);
   assert.match(outbound.text, /Journey 2: Nikki Beach to St John's/);
   assert.match(outbound.text, /Contact the Captain/);
+  assert.match(outbound.html, /<table[^>]*role="presentation"/);
+  assert.match(outbound.html, /Meet on pier 3 next to the record shop/);
   assert.doesNotMatch(outbound.text, /Generic fallback/);
 });
 

@@ -36,7 +36,9 @@ test('paired return reminder contains the complete approved itinerary and wet-ar
     outboundArrivalByTimeLabel: '9:45 AM', returnPickupTimeLabel: '5:00 PM',
     returnArrivalByTimeLabel: '4:45 PM', adultCount: 2, childCount: 1,
     infantCount: 0, captainFullName: 'Stevie Steve', captainSurname: 'Steve',
-    vehicleType: 'Speed Boat', vehicleName: 'Silver Lady', wetDestination: true
+    vehicleType: 'Speed Boat', vehicleName: 'Silver Lady', wetDestination: true,
+    pickupArrivalNotes: "We're on pier 3 next to the record shop.",
+    pickupDirectionsUrl: 'https://maps.app.goo.gl/example'
   });
 
   assert.equal(email.subject, "Reminder of Itinerary for St John's to Nikki Beach tomorrow");
@@ -46,14 +48,15 @@ Your Pace Shuttles return journey in Antigua between St John's and Nikki Beach i
 
 Your Speed Boat and captain have now been assigned to your trip.
 
-Speed Boat:
-Silver Lady
+Vehicle and captain
+
+Speed Boat: Silver Lady
 
 Captain: Stevie Steve
 
-Here is a reminder of your itinerary details.
+Itinerary
 
-Party of 2 adults, 1 child and 0 infants
+Party of 2 adults and 1 child
 
 Journey 1: St John's to Nikki Beach
 
@@ -67,9 +70,20 @@ Pick up time: 5:00 PM
 
 Please be at the Speed Boat by 4:45 PM
 
+Arrival at St John's
+
+We're on pier 3 next to the record shop.
+
+Please arrive at St John's by 9:45 AM.
+
+Directions are available at the following link:
+https://maps.app.goo.gl/example
+
+If you have trouble locating the Speed Boat, please contact Captain Steve directly using the instructions below.
+
 Nikki Beach is a wet arrival destination, meaning you and your party will get wet. Please make sure you have appropriate clothes and a towel with this in mind.
 
-Contacting Us
+Contact Us
 
 On the day of the journey, you can contact Captain Steve if necessary using My Journeys > Help & Support > Contact the Captain in the Pace Shuttles portal.
 
@@ -88,10 +102,41 @@ test('dry destination reminder omits the wet-arrival section', async () => {
     outboundArrivalByTimeLabel: '11:45 AM', returnPickupTimeLabel: '5:00 PM',
     returnArrivalByTimeLabel: '4:45 PM', adultCount: 1, childCount: 0,
     infantCount: 0, captainFullName: 'James Williams', captainSurname: 'Williams',
-    vehicleType: 'Speed Boat', vehicleName: 'Sea Runner', wetDestination: false
+    vehicleType: 'Speed Boat', vehicleName: 'Sea Runner', wetDestination: false,
+    pickupArrivalNotes: 'Meet beside the marina office.',
+    pickupDirectionsUrl: 'https://maps.app.goo.gl/marina'
   });
   assert.doesNotMatch(email.text, /wet arrival destination|appropriate clothes and a towel/);
   assert.match(email.text, /Journey 2: Cane Garden Bay to Nanny Cay Marina/);
+});
+
+test('passenger summary omits zero-value categories and the HTML uses clear sections, bold values and an itinerary table', async () => {
+  const { buildTomorrowJourneyEmail } = await loadEmailContent();
+  const email = buildTomorrowJourneyEmail({
+    firstName: 'Paul', countryName: 'Antigua', pickupName: "St John's",
+    destinationName: 'Nikki Beach', outboundPickupTimeLabel: '10:00 AM',
+    outboundArrivalByTimeLabel: '9:45 AM', returnPickupTimeLabel: '1:00 PM',
+    returnArrivalByTimeLabel: '12:45 PM', adultCount: 2, childCount: 0,
+    infantCount: 0, captainFullName: 'Stevie Steve', captainSurname: 'Steve',
+    vehicleType: 'Speed Boat', vehicleName: 'Irievibez', wetDestination: false,
+    pickupArrivalNotes: "We're on pier 3 next to the record shop.",
+    pickupDirectionsUrl: 'https://maps.app.goo.gl/example'
+  });
+
+  assert.match(email.text, /Party of 2 adults/);
+  assert.doesNotMatch(email.text, /0 children|0 infants/);
+  assert.match(email.text, /Speed Boat: Irievibez/);
+  assert.ok(email.html, 'T-24 email must provide a dedicated HTML body');
+  assert.match(email.html, />Vehicle and captain<\/h2>/);
+  assert.match(email.html, />Itinerary<\/h2>/);
+  assert.match(email.html, />Arrival at <strong>St John&#39;s<\/strong><\/h2>/);
+  assert.match(email.html, />Contact Us<\/h2>/);
+  assert.match(email.html, /<table[^>]*role="presentation"/);
+  assert.match(email.html, /<strong>Speed Boat<\/strong>: <strong>Irievibez<\/strong>/);
+  assert.match(email.html, /<strong>Party of 2 adults<\/strong>/);
+  assert.doesNotMatch(email.html, /<strong>Paul<\/strong>/);
+  assert.match(email.html, /href="https:\/\/maps\.app\.goo\.gl\/example"/);
+  assert.match(email.html, /📍/);
 });
 
 test('captain-pending reminder gives the customer specific journey and vehicle details without inventing an operational captain', async () => {
@@ -138,7 +183,9 @@ test('customer-provided names are escaped while directions retain a safe exact l
     outboundArrivalByTimeLabel: '11:45 AM', returnPickupTimeLabel: '5:00 PM',
     returnArrivalByTimeLabel: '4:45 PM', adultCount: 1, childCount: 0,
     infantCount: 0, captainFullName: 'James Williams', captainSurname: 'Williams',
-    vehicleType: 'Speed Boat', vehicleName: 'Sea Runner', wetDestination: false
+    vehicleType: 'Speed Boat', vehicleName: 'Sea Runner', wetDestination: false,
+    pickupArrivalNotes: 'Meet beside the marina office.',
+    pickupDirectionsUrl: 'https://maps.app.goo.gl/example'
   });
   assert.match(email.subject, /The "Soggy" Dollar/);
   assert.match(email.text, /Hi <Paul & Co>\n/);
