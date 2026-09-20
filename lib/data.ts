@@ -173,8 +173,8 @@ export const captainStartJourney=(assignmentId:string)=>rpc('v2_captain_start_jo
 export const captainCompleteJourney=(assignmentId:string,normal:boolean,notes:string,incident:boolean,summary:string)=>rpc('v2_captain_complete_journey',{p_captain_assignment_id:assignmentId,p_completed_normally:normal,p_captain_notes:notes,p_incident_flag:incident,p_incident_summary:summary});
 export async function loadCaptainTodayDuties(){return select('v2_captain_today_duties','first_scheduled_departure_ts',50)}
 export async function loadCaptainTodayManifest(){return select('v2_captain_today_manifest','lead_passenger_name',500)}
-export const captainStartLeg=(departureId:string)=>rpc('v2_captain_start_leg',{p_departure_id:departureId});
-export const captainEndLeg=(departureId:string,state:'normal'|'incident',notes:string,summary:string)=>rpc('v2_captain_end_leg',{p_departure_id:departureId,p_completion_state:state,p_notes:notes,p_incident_summary:summary});
+export const captainStartLeg=(departureId:string,allocationId:string)=>rpc('v2_captain_start_leg',{p_departure_id:departureId,p_confirmed_allocation_id:allocationId});
+export const captainEndLeg=(departureId:string,allocationId:string,state:'normal'|'incident',notes:string,summary:string)=>rpc('v2_captain_end_leg',{p_departure_id:departureId,p_confirmed_allocation_id:allocationId,p_completion_state:state,p_notes:notes,p_incident_summary:summary});
 export const adminReplySupportMessage=(conversationId:string,message:string)=>rpc('v2_admin_reply_support_message',{p_conversation_id:conversationId,p_message_text:message});
 export const adminCancelPendingNotification=(notificationId:string)=>rpc('v2_admin_cancel_pending_notification',{p_notification_id:notificationId});
 

@@ -1454,7 +1454,7 @@ begin
   end if;
   foreach v_signature in array array[
     'pace_v2.captain_today_duties()','pace_v2.captain_today_manifest()',
-    'public.v2_captain_start_leg(uuid)','public.v2_captain_end_leg(uuid,text,text,text)',
+    'public.v2_captain_start_leg(uuid,uuid)','public.v2_captain_end_leg(uuid,text,text,text,uuid)',
     'public.v2_captain_open_party_conversation(uuid,uuid,text,text,uuid)'
   ] loop
     v_function:=to_regprocedure(v_signature);

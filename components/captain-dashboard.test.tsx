@@ -210,7 +210,7 @@ describe('CaptainDashboard journey messaging integration',()=>{
   await userEvent.setup().click(await screen.findByRole('button',{name:'Start Leg 1'}));
   await waitFor(()=>expect(dutyLoader).toHaveBeenCalledTimes(2));
   expect(manifestLoader).toHaveBeenCalledTimes(2);
-  expect(startLeg).toHaveBeenCalledWith('departure-today');
+  expect(startLeg).toHaveBeenCalledWith('departure-today','allocation-today');
   expect(await screen.findByText(/Actual departure/)).toBeTruthy();
  });
 
@@ -242,7 +242,7 @@ describe('CaptainDashboard journey messaging integration',()=>{
   await waitFor(()=>expect(dutyLoader).toHaveBeenCalledTimes(2));
   expect(await screen.findByText('No duties are assigned for today.')).toBeTruthy();
   expect(screen.queryByRole('button',{name:'Refresh timing evidence'})).toBeNull();
-  expect(endLeg).toHaveBeenCalledWith('departure-return','normal','','');
+  expect(endLeg).toHaveBeenCalledWith('departure-return','allocation-today','normal','','');
  });
 
  it('rejects an older timing refresh after a newer message refresh commits',async()=>{
