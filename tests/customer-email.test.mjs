@@ -8,6 +8,7 @@ async function loadDispatcher() {
   const builderPath = new URL('../lib/journey-broadcast-email.ts', import.meta.url);
   const feedbackBuilderPath = new URL('../lib/feedback-email-content.ts', import.meta.url);
   const t72BuilderPath = new URL('../lib/t72-operator-email.ts', import.meta.url);
+  const t24OperatorBuilderPath = new URL('../lib/t24-operator-email.ts', import.meta.url);
   const journeyContentPath = new URL('../lib/journey-email-content.ts', import.meta.url);
   const builder = ts.transpileModule(readFileSync(builderPath, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
@@ -18,6 +19,9 @@ async function loadDispatcher() {
   const t72Builder = ts.transpileModule(readFileSync(t72BuilderPath, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText.replaceAll('export ', '');
+  const t24OperatorBuilder = ts.transpileModule(readFileSync(t24OperatorBuilderPath, 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
+  }).outputText.replaceAll('export ', '');
   const journeyContent = ts.transpileModule(readFileSync(journeyContentPath, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText.replaceAll('export ', '');
@@ -26,6 +30,7 @@ async function loadDispatcher() {
     .replace("import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';", builder)
     .replace("import {buildFeedbackEmail} from './feedback-email-content';", feedbackBuilder)
     .replace("import {buildT72OperatorEmail,type T72OperatorEmailInput} from './t72-operator-email';", t72Builder)
+    .replace("import {buildT24OperatorEmail,type T24OperatorEmailInput} from './t24-operator-email';", t24OperatorBuilder)
     .replace("import {buildCaptainPendingJourneyEmail,buildTomorrowJourneyEmail,type CaptainPendingJourneyEmailInput,type TomorrowJourneyEmailInput} from './journey-email-content';", journeyContent);
   const compiled = ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
@@ -35,6 +40,16 @@ async function loadDispatcher() {
 
 const row = { notification_id: 'notification-42', to_email: 'paul@example.com', subject: 'Tomorrow', body: 'Body', template_code: 'journey_tomorrow', booking_id: 'booking-1', departure_id: 'departure-1' };
 const env = { NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SERVICE_ROLE_KEY: 'server-secret', RESEND_API_KEY: 'resend-secret' };
+
+test('T-24 operator confirmations use their structured table email', async () => {
+  const {dispatchDueCustomerEmails}=await loadDispatcher();let outbound;
+  const operatorRow={...row,template_code:'T24_OPERATOR_CONFIRMED_EMAIL',metadata:{pickupName:'Nanny Cay',destinationName:'Jost Van Dyke',departureDate:'Sunday, 20 September 2026',vehicles:[{vehicleType:'Speed Boat',vehicleName:'IrieVibez',captainName:'Stevie Steve'}],itinerary:[{journey:'Journey 1',route:'Nanny Cay to Jost Van Dyke',pickupTime:'10:00 AM',arriveByTime:'9:45 AM'}],parties:[{party:'Smith party',vehicleName:'IrieVibez',passengers:[{name:'Alex Smith',category:'adult'}]}]}};
+  const result=await dispatchDueCustomerEmails(1,{env,createClient:()=>({rpc:async name=>name==='v2_system_claim_due_customer_emails_with_metadata'?{data:[operatorRow],error:null}:{error:null}}),fetchImpl:async(_url,request)=>{outbound=JSON.parse(request.body);return {ok:true,json:async()=>({id:'operator-t24'})};}});
+  assert.deepEqual(result,{claimed:1,sent:1,failed:0});
+  assert.equal(outbound.subject,'Journey confirmed for Nanny Cay to Jost Van Dyke tomorrow');
+  assert.match(outbound.html,/>Manifest<\/h2>/);
+  assert.match(outbound.html,/Alex Smith/);
+});
 
 test('T-72 operator notifications are rendered from structured journey, vehicle and captain metadata', async () => {
   const { dispatchDueCustomerEmails } = await loadDispatcher();

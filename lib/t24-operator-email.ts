@@ -1,0 +1,27 @@
+export type T24OperatorVehicle={vehicleType:string;vehicleName:string;captainName:string};
+export type T24OperatorItinerary={journey:string;route:string;pickupTime:string;arriveByTime:string};
+export type T24OperatorPassenger={name:string;category:'adult'|'child'|'infant'};
+export type T24OperatorParty={party:string;vehicleName:string;passengers:T24OperatorPassenger[]};
+export type T24OperatorEmailInput={pickupName:string;destinationName:string;departureDate:string;vehicles:T24OperatorVehicle[];itinerary:T24OperatorItinerary[];parties:T24OperatorParty[]};
+
+const requiredT24Operator=(value:string,label:string)=>{const clean=String(value||'').trim();if(!clean)throw new Error(`${label} is required for the T-24 operator email`);return clean;};
+const escapeT24Operator=(value:string)=>value.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]||ch));
+const cellT24Operator=(value:string)=>`<td style="padding:9px 10px;border:1px solid #d8e3ea;vertical-align:top">${escapeT24Operator(value)}</td>`;
+const tableT24Operator=(headings:string[],rows:string[][])=>`<table role="table" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:0 0 24px;font-size:14px"><thead><tr>${headings.map(h=>`<th scope="col" style="padding:9px 10px;border:1px solid #b9ccd8;background:#eef5f8;text-align:left">${escapeT24Operator(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(cellT24Operator).join('')}</tr>`).join('')}</tbody></table>`;
+const categoryT24Operator=(value:string)=>value.charAt(0).toUpperCase()+value.slice(1).toLowerCase();
+
+export function buildT24OperatorEmail(input:T24OperatorEmailInput):{subject:string;text:string;html:string}{
+ const pickupName=requiredT24Operator(input.pickupName,'Pickup');const destinationName=requiredT24Operator(input.destinationName,'Destination');const departureDate=requiredT24Operator(input.departureDate,'Departure date');
+ if(!Array.isArray(input.vehicles)||!input.vehicles.length)throw new Error('At least one scheduled vehicle is required for the T-24 operator email');
+ if(!Array.isArray(input.itinerary)||!input.itinerary.length)throw new Error('At least one itinerary leg is required for the T-24 operator email');
+ if(!Array.isArray(input.parties)||!input.parties.length)throw new Error('At least one passenger party is required for the T-24 operator email');
+ const vehicles=input.vehicles.map(v=>({vehicleType:requiredT24Operator(v.vehicleType,'Vehicle type'),vehicleName:requiredT24Operator(v.vehicleName,'Vehicle name'),captainName:requiredT24Operator(v.captainName,'Captain')}));
+ const itinerary=input.itinerary.map(i=>({journey:requiredT24Operator(i.journey,'Journey'),route:requiredT24Operator(i.route,'Route'),pickupTime:requiredT24Operator(i.pickupTime,'Pickup time'),arriveByTime:requiredT24Operator(i.arriveByTime,'Arrive-by time')}));
+ const parties=input.parties.map(p=>({party:requiredT24Operator(p.party,'Party'),vehicleName:requiredT24Operator(p.vehicleName,'Party vehicle'),passengers:(p.passengers||[]).map(x=>({name:requiredT24Operator(x.name,'Passenger name'),category:requiredT24Operator(x.category,'Passenger category')}))}));
+ if(parties.some(p=>!p.passengers.length))throw new Error('Every party requires at least one passenger');
+ const subject=`Journey confirmed for ${pickupName} to ${destinationName} tomorrow`;
+ const manifest=parties.flatMap(p=>p.passengers.map((x,index)=>[index===0?p.party:'',x.name,categoryT24Operator(x.category),p.vehicleName]));
+ const text=`Journey\n${pickupName} to ${destinationName}\nDate: ${departureDate}\n\nScheduled vehicles and captains\n${vehicles.map(v=>`${v.vehicleName} — ${v.vehicleType} — ${v.captainName}`).join('\n')}\n\nItinerary\n${itinerary.map(i=>`${i.journey}: ${i.route} — Pickup ${i.pickupTime} — Arrive by ${i.arriveByTime}`).join('\n')}\n\nManifest\n${parties.map(p=>`${p.party} — ${p.vehicleName}\n${p.passengers.map(x=>`  ${x.name} — ${categoryT24Operator(x.category)}`).join('\n')}`).join('\n\n')}\n\nPlease review the manifest and ensure your scheduled vehicle and captain are ready.\n\nThanks,\nThe Pace Shuttles Team`;
+ const html=`<!doctype html><html><body style="margin:0;background:#f4f7f9;font-family:Arial,sans-serif;color:#173042"><table role="presentation" width="100%"><tr><td align="center" style="padding:28px 12px"><table role="presentation" width="100%" style="max-width:760px;background:#fff;border-radius:14px;overflow:hidden"><tr><td style="padding:24px 30px;background:#0877c9;color:#fff"><div style="font-size:24px;font-weight:700">Pace Shuttles</div></td></tr><tr><td style="padding:30px"><h1 style="font-size:24px;margin:0 0 22px">${escapeT24Operator(subject)}</h1><h2 style="font-size:19px">Journey</h2>${tableT24Operator(['Journey','Date'],[[`${pickupName} to ${destinationName}`,departureDate]])}<h2 style="font-size:19px">Scheduled vehicles and captains</h2>${tableT24Operator(['Vehicle type','Vehicle','Captain'],vehicles.map(v=>[v.vehicleType,v.vehicleName,v.captainName]))}<h2 style="font-size:19px">Itinerary</h2>${tableT24Operator(['Leg','Journey','Pickup time','Arrive by'],itinerary.map(i=>[i.journey,i.route,i.pickupTime,i.arriveByTime]))}<h2 style="font-size:19px">Manifest</h2>${tableT24Operator(['Party','Passenger','Category','Vehicle'],manifest)}<p>Please review the manifest and ensure your scheduled vehicle and captain are ready.</p><p>Thanks,<br/>The Pace Shuttles Team</p></td></tr></table></td></tr></table></body></html>`;
+ return {subject,text,html};
+}
