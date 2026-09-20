@@ -29,6 +29,17 @@ import {AuthGate} from './auth';
 afterEach(()=>{cleanup();vi.clearAllMocks();currentSession={user:{id:'customer-user'}};pathname='/operator'});
 
 describe('AuthGate account switching',()=>{
+  it('lets an anonymous My Journeys visitor return to public browsing',async()=>{
+    pathname='/customer';
+    currentSession=null;
+
+    render(<AuthGate><div>My journeys</div></AuthGate>);
+
+    expect(await screen.findByRole('heading',{name:'Sign in'})).toBeTruthy();
+    expect(screen.getByRole('link',{name:'Back to homepage'}).getAttribute('href')).toBe('/');
+    expect(screen.getByRole('link',{name:'Find a journey'}).getAttribute('href')).toBe('/book');
+  });
+
   it('allows an anonymous first-time partner applicant to open the partner form',()=>{
     pathname='/partners';
     currentSession=null;
