@@ -32,11 +32,10 @@ test('partner network summary lists unique vehicle types and handles country gra
  assert.deepEqual(partnerNetworkSnapshot([{name:'Speed Boat'}],[{id:'ag'}]),{vehicleTypes:'Speed Boat',countryCount:1,countryLabel:'country'});
 });
 
-test('partner introduction uses live vehicle and country values with the approved invitation',()=>{
+test('partner introduction uses the approved concise copy',()=>{
  const source=readFileSync('components/partner-application-form.tsx','utf8');
- assert.match(source,/partnerNetworkSnapshot\(types,countries\)/);
- assert.match(source,/networkReady\?/);
- assert.match(source,/world-class destinations and vehicle operators of all kinds/i);
+ assert.match(source,/<p>Pace Shuttles is always on the lookout for world-class destinations and vehicle operators of all kinds\.<\/p>/);
+ assert.doesNotMatch(source,/So far, we provide/);
  assert.match(source,/Our team will assess your application and be in touch regarding the next steps\./);
  assert.doesNotMatch(source,/Remaining publication details can be completed/);
 });
