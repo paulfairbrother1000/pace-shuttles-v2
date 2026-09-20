@@ -63,8 +63,8 @@ export interface CaptainTodayReloadResult{duties:readonly CaptainTodayDutyRow[];
 
 export type CaptainTodayActionResult={data?:unknown;error?:unknown};
 export interface CaptainTodayActions{
- startLeg:(departureId:string)=>Promise<CaptainTodayActionResult>;
- endLeg:(departureId:string,state:'normal'|'incident',notes:string,summary:string)=>Promise<CaptainTodayActionResult>;
+ startLeg:(departureId:string,allocationId:string)=>Promise<CaptainTodayActionResult>;
+ endLeg:(departureId:string,allocationId:string,state:'normal'|'incident',notes:string,summary:string)=>Promise<CaptainTodayActionResult>;
 }
 export const defaultCaptainTodayActions:CaptainTodayActions={startLeg:captainStartLeg,endLeg:captainEndLeg};
 
@@ -299,7 +299,7 @@ export function CaptainToday({duties,manifest,selectedDutyId,onSelectedDutyIdCha
   if(!window.confirm(`Start Leg ${leg}: ${leg===1?duty.leg_1_name:duty.leg_2_name}? This records the actual departure time.`))return;
   const operation=beginOperation(pending.dutyId);setActionErrors(current=>({...current,[key]:''}));
   try{
-   const result=await actions.startLeg(departureId);if(!operationIsCurrent(operation))return;if(result.error)throw result.error;
+   const result=await actions.startLeg(departureId,pending.allocationId);if(!operationIsCurrent(operation))return;if(result.error)throw result.error;
    pending.evidenceTimestamp=timestamp(result.data);
    if(pending.evidenceTimestamp===undefined)throw new Error('Timing action did not return its authoritative server timestamp.');
    await refresh(pending,operation);
@@ -311,7 +311,7 @@ export function CaptainToday({duties,manifest,selectedDutyId,onSelectedDutyIdCha
   if(draft.state==='incident'&&!draft.summary.trim()){updateDraft(key,{error:'An incident summary is required.'});return;}
   const operation=beginOperation(pending.dutyId);updateDraft(key,{error:''});
   try{
-   const result=await actions.endLeg(departureId,draft.state,draft.notes,summary);if(!operationIsCurrent(operation))return;if(result.error)throw result.error;
+   const result=await actions.endLeg(departureId,pending.allocationId,draft.state,draft.notes,summary);if(!operationIsCurrent(operation))return;if(result.error)throw result.error;
    pending.evidenceTimestamp=timestamp(result.data);
    if(pending.evidenceTimestamp===undefined)throw new Error('Timing action did not return its authoritative server timestamp.');
    await refresh(pending,operation);

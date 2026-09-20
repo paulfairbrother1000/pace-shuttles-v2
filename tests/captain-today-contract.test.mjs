@@ -1,10 +1,23 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync,readdirSync } from 'node:fs';
 import test from 'node:test';
 
 const migrationPath='supabase/migrations/20260902031500_captain_duties_and_return_legs.sql';
 const fixturePath='supabase/tests/captain_duties_and_return_legs_contract.sql';
 const reservationMigrationPath='supabase/migrations/20260919230203_captain_duty_reservations.sql';
+
+test('selected captain timing actions bind to the exact confirmed allocation',()=>{
+  const migrations=readdirSync('supabase/migrations').sort().map(name=>readFileSync(`supabase/migrations/${name}`,'utf8')).join('\n');
+  const client=readFileSync('lib/data.ts','utf8');
+  const latestStart=[...migrations.matchAll(/create or replace function public\.v2_captain_start_leg\([\s\S]*?end \$\$;/gi)].at(-1)?.[0]||'';
+  const latestEnd=[...migrations.matchAll(/create or replace function public\.v2_captain_end_leg\([\s\S]*?end \$\$;/gi)].at(-1)?.[0]||'';
+  for(const body of [latestStart,latestEnd]){
+    assert.match(body,/p_confirmed_allocation_id uuid default null/i);
+    assert.match(body,/p_confirmed_allocation_id is null or ca\.id=p_confirmed_allocation_id/i);
+  }
+  assert.match(client,/captainStartLeg=\(departureId:string,allocationId:string\)=>rpc\('v2_captain_start_leg',\{p_departure_id:departureId,p_confirmed_allocation_id:allocationId\}\)/i);
+  assert.match(client,/captainEndLeg=\(departureId:string,allocationId:string,state:'normal'\|'incident',notes:string,summary:string\)=>rpc\('v2_captain_end_leg',\{p_departure_id:departureId,p_confirmed_allocation_id:allocationId,p_completion_state:state,p_notes:notes,p_incident_summary:summary\}\)/i);
+});
 
 test('paired captain reservations release only when the final leg is terminal',()=>{
   const sql=readFileSync(reservationMigrationPath,'utf8');
@@ -458,8 +471,8 @@ test('captain leg RPCs authorize through the outbound allocation and serialize a
   assert.match(fixture,/end final leg retry changed its timestamp or duplicated integration/i);
   assert.match(client,/loadCaptainTodayDuties\(\)\{return select\('v2_captain_today_duties','first_scheduled_departure_ts',50\)\}/i);
   assert.match(client,/loadCaptainTodayManifest\(\)\{return select\('v2_captain_today_manifest','lead_passenger_name',500\)\}/i);
-  assert.match(client,/captainStartLeg=\(departureId:string\)=>rpc\('v2_captain_start_leg',\{p_departure_id:departureId\}\)/i);
-  assert.match(client,/captainEndLeg=\(departureId:string,state:'normal'\|'incident',notes:string,summary:string\)=>rpc\('v2_captain_end_leg',\{p_departure_id:departureId,p_completion_state:state,p_notes:notes,p_incident_summary:summary\}\)/i);
+  assert.match(client,/captainStartLeg=\(departureId:string,allocationId:string\)=>rpc\('v2_captain_start_leg',\{p_departure_id:departureId,p_confirmed_allocation_id:allocationId\}\)/i);
+  assert.match(client,/captainEndLeg=\(departureId:string,allocationId:string,state:'normal'\|'incident',notes:string,summary:string\)=>rpc\('v2_captain_end_leg',\{p_departure_id:departureId,p_confirmed_allocation_id:allocationId,p_completion_state:state,p_notes:notes,p_incident_summary:summary\}\)/i);
 });
 
 test('normal and incident completion summaries are canonical and retry consistently',()=>{

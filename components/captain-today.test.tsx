@@ -141,18 +141,18 @@ describe('CaptainToday',()=>{
   expect((screen.getByRole('button',{name:'End Leg 2'}) as HTMLButtonElement).disabled).toBe(true);
   await user.click(screen.getByRole('button',{name:'Start Leg 1'}));
   expect(confirm).toHaveBeenCalledWith('Start Leg 1: Harbour to Island? This records the actual departure time.');
-  expect(actions.startLeg).toHaveBeenCalledWith('leg-1');
+  expect(actions.startLeg).toHaveBeenCalledWith('leg-1','allocation-paired');
   expect(screen.getByText(/Actual departure 09:05/)).toBeTruthy();
   expect((screen.getByRole('button',{name:'End Leg 1'}) as HTMLButtonElement).disabled).toBe(false);
 
   await user.click(screen.getByRole('button',{name:'End Leg 1'}));
   await user.click(screen.getByRole('button',{name:'Record end time'}));
-  expect(actions.endLeg).toHaveBeenCalledWith('leg-1','normal','','');
+  expect(actions.endLeg).toHaveBeenCalledWith('leg-1','allocation-paired','normal','','');
   expect((screen.getByRole('button',{name:'Start Leg 2'}) as HTMLButtonElement).disabled).toBe(false);
   await user.click(screen.getByRole('button',{name:'Start Leg 2'}));
   await user.click(screen.getByRole('button',{name:'End Leg 2'}));
   await user.click(screen.getByRole('button',{name:'Record end time'}));
-  expect(actions.endLeg).toHaveBeenLastCalledWith('leg-2','normal','','');
+  expect(actions.endLeg).toHaveBeenLastCalledWith('leg-2','allocation-paired','normal','','');
   expect(screen.getByText('Completed',{selector:'.captain-duty-state'})).toBeTruthy();
   confirm.mockRestore();
  });
@@ -186,7 +186,7 @@ describe('CaptainToday',()=>{
   expect((screen.getByLabelText('Incident summary') as HTMLTextAreaElement).value).toBe('Engine alarm cleared');
   expect((screen.getByLabelText('Journey notes (optional)') as HTMLTextAreaElement).value).toBe('Arrived safely');
   await user.click(screen.getByRole('button',{name:'Record end time'}));
-  expect(actions.endLeg).toHaveBeenLastCalledWith('leg-1','incident','Arrived safely','Engine alarm cleared');
+  expect(actions.endLeg).toHaveBeenLastCalledWith('leg-1','allocation-paired','incident','Arrived safely','Engine alarm cleared');
   expect(reload).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole('heading',{name:'Record Leg 1 end'})).toBeNull();
  });
@@ -358,7 +358,7 @@ describe('CaptainToday',()=>{
   await user.click(screen.getByRole('radio',{name:'Normal completion'}));
   await user.click(screen.getByRole('button',{name:'Record end time'}));
 
-  expect(actions.endLeg).toHaveBeenCalledWith('leg-1','normal','All clear','');
+  expect(actions.endLeg).toHaveBeenCalledWith('leg-1','allocation-paired','normal','All clear','');
  });
 
  it.each([
@@ -428,7 +428,7 @@ describe('CaptainToday',()=>{
   await Promise.resolve();
   expect(onReload).not.toHaveBeenCalled();
   await user.click(screen.getByRole('button',{name:'Start Leg 1'}));
-  expect(actions.startLeg).toHaveBeenNthCalledWith(2,'second-leg-1');
+  expect(actions.startLeg).toHaveBeenNthCalledWith(2,'second-leg-1','allocation-second');
  });
 
  it('does not refresh or write after unmount while an end RPC rejects',async()=>{
