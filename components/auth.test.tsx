@@ -17,17 +17,28 @@ const rpc=vi.fn(async()=>({
 }));
 const unsubscribe=vi.fn();
 const onAuthStateChange=vi.fn(()=>({data:{subscription:{unsubscribe}}}));
+let pathname='/operator';
 
-vi.mock('next/navigation',()=>({usePathname:()=>'/operator'}));
+vi.mock('next/navigation',()=>({usePathname:()=>pathname}));
 vi.mock('@/lib/supabase',()=>({
   getSupabaseBrowserClient:()=>({auth:{getSession,onAuthStateChange,signOut,signInWithOtp,verifyOtp},rpc}),
 }));
 
 import {AuthGate} from './auth';
 
-afterEach(()=>{cleanup();vi.clearAllMocks();currentSession={user:{id:'customer-user'}}});
+afterEach(()=>{cleanup();vi.clearAllMocks();currentSession={user:{id:'customer-user'}};pathname='/operator'});
 
 describe('AuthGate account switching',()=>{
+  it('allows an anonymous first-time partner applicant to open the partner form',()=>{
+    pathname='/partners';
+    currentSession=null;
+
+    render(<AuthGate><div>Partner application form</div></AuthGate>);
+
+    expect(screen.getByText('Partner application form')).toBeTruthy();
+    expect(screen.queryByRole('heading',{name:'Sign in'})).toBeNull();
+  });
+
   it('signs out from an unauthorised route so another role can sign in on the same route',async()=>{
     render(<AuthGate><div>Operator workspace</div></AuthGate>);
 

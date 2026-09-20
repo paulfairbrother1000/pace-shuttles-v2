@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { CHECKOUT_OTP_LENGTH, isCheckoutOtpComplete, normalizeCheckoutOtp } from '@/lib/checkout-otp';
 
-const PUBLIC=['/','/book','/checkout'];
+const PUBLIC=['/','/book','/checkout','/partners'];
 type AccessContext={user_id:string|null;platform_role:string;is_site_admin:boolean;operator_ids:string[];operator_roles:string[];captain_ids:string[]};
 
 export function AuthGate({children}:{children:ReactNode}){
