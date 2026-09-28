@@ -1,5 +1,6 @@
 {
   "crons": [
-    { "path": "/api/operations/run-scheduled", "schedule": "0 * * * *" }
+    { "path": "/api/operations/run-scheduled", "schedule": "0 * * * *" },
+    { "path": "/api/operations/watch-scheduled", "schedule": "15 * * * *" }
   ]
 }

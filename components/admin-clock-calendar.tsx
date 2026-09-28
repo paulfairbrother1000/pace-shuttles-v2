@@ -14,13 +14,13 @@ function RunHistoryRow({run}:{run:SchedulerRun}){
  const phases=run.phases||[];
  return <article className={`scheduler-run ${run.status}`}>
   <div className="scheduler-run-head">
-   <div><Status value={statusLabel(run.status)}/><b>{sourceLabel(run.execution_source)} run</b><small>{runTime(run.started_at)} · {schedulerRunDuration(run)}</small></div>
+   <div><Status value={statusLabel(run.status)}/><b>{run.status==='missed'?'Missed — no invocation':`${sourceLabel(run.execution_source)} run`}</b><small>{runTime(run.started_at)} · {schedulerRunDuration(run)}</small></div>
    <button className="btn secondary" aria-label={`${open?'Hide':'Show'} details for ${run.status} ${run.execution_source} run`} onClick={()=>setOpen(value=>!value)}>{open?'Hide details':'Show details'}</button>
   </div>
   <p className="scheduler-run-summary">{schedulerRunSummary(run)}</p>
   {run.failure_reason?<p className="action-error"><b>{run.failure_phase?`${phaseLabel(run.failure_phase)} failed: `:'Failed: '}</b>{run.failure_reason}</p>:null}
-  {run.status==='failed'?<div className="scheduler-impact"><p><b>Impact</b><br/>{schedulerRunImpact(run)}</p><p><b>Resolution</b><br/>{schedulerRunResolution(run)}</p></div>:null}
-  {open?<div className="scheduler-phases">{phases.length?phases.map(phase=><div className="scheduler-phase" key={phase.id||phase.phase}><div><b>{phaseLabel(phase.phase)}</b><small>{runTime(phase.started_at)} · {schedulerRunDuration(phase)}</small></div><Status value={statusLabel(phase.status)}/><div><span>{schedulerPhaseSummary(phase)}</span>{phase.failure_reason?<small className="action-error">{phase.failure_reason}</small>:null}</div></div>):<p className="empty-state">Detailed phase evidence was not recorded for this earlier run.</p>}</div>:null}
+  {['failed','missed'].includes(run.status)?<div className="scheduler-impact"><p><b>Impact</b><br/>{schedulerRunImpact(run)}</p><p><b>Resolution</b><br/>{schedulerRunResolution(run)}</p></div>:null}
+  {open?<div className="scheduler-phases">{phases.length?phases.map(phase=><div className="scheduler-phase" key={phase.id||phase.phase}><div><b>{phaseLabel(phase.phase)}</b><small>{runTime(phase.started_at)} · {schedulerRunDuration(phase)}</small></div><Status value={statusLabel(phase.status)}/><div><span>{schedulerPhaseSummary(phase)}</span>{phase.failure_reason?<small className="action-error">{phase.failure_reason}</small>:null}</div></div>):<p className="empty-state">{run.status==='missed'?'No phases ran because the scheduled request never arrived.':'Detailed phase evidence was not recorded for this earlier run.'}</p>}</div>:null}
  </article>;
 }
 

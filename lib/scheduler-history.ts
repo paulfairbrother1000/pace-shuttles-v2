@@ -21,7 +21,8 @@ const PHASE_LABELS:Record<string,string>={
 
 export const phaseLabel=(phase:string)=>PHASE_LABELS[phase]||phase.replaceAll('_',' ');
 
-export function schedulerRunDuration(run:Pick<SchedulerRun,'started_at'|'finished_at'>){
+export function schedulerRunDuration(run:Pick<SchedulerRun,'started_at'|'finished_at'> & Partial<Pick<SchedulerRun,'failure_reason'>>){
+ if(run.failure_reason==='No scheduled invocation recorded')return 'Not started';
  if(!run.finished_at)return 'Running';
  const seconds=Math.max(0,Math.round((new Date(run.finished_at).getTime()-new Date(run.started_at).getTime())/1000));
  if(!Number.isFinite(seconds))return '—';
@@ -29,7 +30,8 @@ export function schedulerRunDuration(run:Pick<SchedulerRun,'started_at'|'finishe
  return minutes?`${minutes}m ${remaining}s`:`${remaining}s`;
 }
 
-export function schedulerRunSummary(run:Pick<SchedulerRun,'result'>){
+export function schedulerRunSummary(run:Pick<SchedulerRun,'result'> & Partial<Pick<SchedulerRun,'failure_reason'>>){
+ if(run.failure_reason==='No scheduled invocation recorded')return 'Scheduled job did not start · No processing or email delivery recorded';
  const result=run.result||{},operations=result.operations||result.journey_operations||{};
  const emails=result.emails||result.email_delivery||{};
  return [
@@ -43,7 +45,7 @@ export function schedulerRunSummary(run:Pick<SchedulerRun,'result'>){
 
 export const schedulerRunImpact=(run:Pick<SchedulerRun,'impact_summary'>)=>run.impact_summary||'No recorded operational impact.';
 
-export const schedulerRunResolution=(run:Pick<SchedulerRun,'status'|'resolution_summary'>)=>run.resolution_summary||(run.status==='failed'?'Unresolved':'No incident');
+export const schedulerRunResolution=(run:Pick<SchedulerRun,'status'|'resolution_summary'>)=>run.resolution_summary||(['failed','missed'].includes(run.status)?'Unresolved':'No incident');
 
 export function schedulerPhaseSummary(phase:SchedulerPhase){
  const value=phase.result;

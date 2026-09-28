@@ -25,4 +25,9 @@ describe('scheduler history presentation',()=>{
   expect(schedulerRunResolution(run)).toBe('Resolved by successful scheduled run at 2026-09-15 21:00:12 UTC.');
   expect(schedulerRunResolution({...run,resolution_summary:null})).toBe('Unresolved');
  });
+ it('describes an absent invocation without implying any phases executed',()=>{
+  expect(schedulerRunSummary({...run,failure_reason:'No scheduled invocation recorded',result:{}}))
+   .toBe('Scheduled job did not start · No processing or email delivery recorded');
+  expect(schedulerRunDuration({...run,failure_reason:'No scheduled invocation recorded'})).toBe('Not started');
+ });
 });

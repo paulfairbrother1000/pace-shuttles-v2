@@ -52,7 +52,13 @@ export function createScheduledOperationsHandler(deps: ScheduledOperationsDepend
     };
     let data:unknown,t24Data:unknown,feedbackData:unknown;
     try{
-      data=await runPhase('journey_operations',async()=>{const response=await supabase.rpc('v2_system_run_scheduled_operations',{p_t72_limit:100,p_t24_limit:100});if(response.error)throw new SchedulerRpcError(response.error.message);return response.data});
+      data=await runPhase('journey_operations',async()=>{
+        const response=await supabase.rpc('v2_system_run_scheduled_operations',{p_t72_limit:100,p_t24_limit:100});
+        if(response.error)throw new SchedulerRpcError(response.error.message);
+        const returns=await supabase.rpc('v2_system_reconcile_empty_paired_returns',{p_limit:100});
+        if(returns.error)throw new SchedulerRpcError(returns.error.message);
+        return {...(response.data as Record<string,unknown>||{}),past_empty_returns_cancelled:returns.data};
+      });
       partial.operations=data;
       t24Data=await runPhase('t24_communications',async()=>{const response=await supabase.rpc('v2_system_schedule_t24_journey_notifications',{p_as_of:requestedAt});if(response.error)throw new SchedulerRpcError(response.error.message);return response.data});
       partial.t24_queued=t24Data;
