@@ -250,3 +250,10 @@ test('every successful scheduled run retries pending failure or recovery alerts 
  assert.equal(alertDispatches,1);
  assert.equal((await response.json()).status,'completed');
 });
+
+ test('recovery uses atomic recovery admission and skips without sending emails when not admitted',async()=>{
+ const {createScheduledOperationsHandler}=await loadRoute();const calls=[];
+ const handle=createScheduledOperationsHandler(dependencies({beginRpc:'v2_system_scheduler_recovery_begin',executionSource:'catch_up',createClient:()=>({rpc:async(name)=>{calls.push(name);return {data:[],error:null}}}),dispatchDueCustomerEmails:async()=>{throw Error('must not send')}}));
+ const response=await handle(request('Bearer scheduled-secret'));
+ assert.equal(response.status,200);assert.equal((await response.json()).status,'skipped');assert.deepEqual(calls,['v2_system_scheduler_recovery_begin']);
+ });

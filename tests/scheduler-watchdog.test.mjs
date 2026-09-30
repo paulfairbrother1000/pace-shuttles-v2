@@ -33,3 +33,16 @@ test('watchdog database failure does not claim an alert or claim success',async(
  const response=await handle(new Request('https://example.test/api/operations/watch-scheduled',{headers:{authorization:'Bearer secret'}}));
  assert.equal(response.status,503);assert.equal(dispatches,0);
 });
+
+ test('watchdog attempts recovery and refreshes missed-slot resolution after success',async()=>{
+ const {createSchedulerWatchdogHandler}=await loadWatchdog();const calls=[];
+ const handle=createSchedulerWatchdogHandler({env,now:()=> '2026-09-29T20:15:00Z',createClient:()=>({rpc:async()=>{calls.push('detect');return {data:{missing:0,resolved:1},error:null}}}),dispatchMissingSlotAlerts:async()=>{calls.push('alerts');return {claimed:0,sent:0,failed:0}},recoverScheduledOperations:async(req)=>{assert.equal(req.headers.get('authorization'),'Bearer secret');calls.push('recover');return new Response(JSON.stringify({ok:true,status:'completed',runId:'recovery'}),{status:200})}});
+ const response=await handle(new Request('https://example.test/api/operations/watch-scheduled',{headers:{authorization:'Bearer secret'}}));
+ assert.equal(response.status,200);assert.deepEqual(calls,['detect','recover','detect','alerts']);assert.equal((await response.json()).recovery.status,'completed');
+ });
+
+test('recovery failure still dispatches the missed-run alert and returns failure',async()=>{
+ const {createSchedulerWatchdogHandler}=await loadWatchdog();let alerts=0;
+ const handle=createSchedulerWatchdogHandler({env,now:()=> '2026-09-29T20:15:00Z',createClient:()=>({rpc:async()=>({data:{missing:1},error:null})}),dispatchMissingSlotAlerts:async()=>{alerts++;return {claimed:1,sent:1,failed:0}},recoverScheduledOperations:async()=>new Response(JSON.stringify({error:'failed'}),{status:503})});
+ assert.equal((await handle(new Request('https://example.test/watch',{headers:{authorization:'Bearer secret'}}))).status,503);assert.equal(alerts,1);
+});

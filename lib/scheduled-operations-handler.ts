@@ -11,6 +11,8 @@ type SchedulerClient = {
 
 type ScheduledOperationsDependencies = {
   env: NodeJS.ProcessEnv;
+  beginRpc?: string;
+  executionSource?: 'scheduled' | 'catch_up';
   now: () => string;
   createClient: (url: string, key: string, options: { auth: { persistSession: boolean } }) => SchedulerClient;
   dispatchDueCustomerEmails: typeof dispatchDueCustomerEmails;
@@ -29,11 +31,11 @@ export function createScheduledOperationsHandler(deps: ScheduledOperationsDepend
     const supabase = deps.createClient(url, key, { auth: { persistSession: false } });
     const dispatchAdminAlerts=async()=>{try{await deps.dispatchSchedulerAdminAlerts(25)}catch(error:unknown){console.error('Scheduler Site Admin alert dispatch failed',error instanceof Error?error.message:error)}};
     const requestedAt=deps.now();
-    const {data:beginData,error:beginError}=await supabase.rpc('v2_system_scheduler_begin',{p_execution_source:'scheduled',p_requested_at:requestedAt});
+    const {data:beginData,error:beginError}=await supabase.rpc(deps.beginRpc || 'v2_system_scheduler_begin',{p_execution_source:deps.executionSource || 'scheduled',p_requested_at:requestedAt});
     if(beginError)return NextResponse.json({error:beginError.message},{status:500});
     const begin=Array.isArray(beginData)?beginData[0]:beginData as {run_id?:string;enabled?:boolean}|null;
     const runId=String(begin?.run_id||'');
-    if(!runId)return NextResponse.json({error:'Scheduler run could not be started'},{status:500});
+    if(!runId)return NextResponse.json({ok:true,status:'skipped'});
     if(begin?.enabled===false){await dispatchAdminAlerts();return NextResponse.json({ok:true,status:'paused',runId});}
     const partial:Record<string,unknown>={};
     const runPhase=async<T>(phase:string,operation:()=>Promise<T>)=>{
