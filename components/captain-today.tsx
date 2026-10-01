@@ -140,7 +140,11 @@ function Manifest({rows,onMessageParty}:{rows:readonly CaptainTodayManifestRow[]
 
 type CompletionDraft={state:'normal'|'incident';notes:string;summary:string;error:string};
 const blankDraft=():CompletionDraft=>({state:'normal',notes:'',summary:'',error:''});
-const resultMessage=(error:unknown)=>error instanceof Error?error.message:String(error||'Unable to record this timing action.');
+const resultMessage=(error:unknown)=>{
+ if(error instanceof Error)return error.message;
+ if(error&&typeof error==='object'&&'message' in error&&typeof error.message==='string')return error.message;
+ return typeof error==='string'&&error?error:'Unable to record this timing action.';
+};
 
 function LegSection({duty,leg,nextAction,busy,onStart,onOpenEnd,endOpen,draft,onDraftChange,onCancelEnd,onRecordEnd}:{
  duty:CaptainTodayDutyRow;leg:1|2;nextAction:ReturnType<typeof nextLegAction>;busy:boolean;
