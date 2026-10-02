@@ -13,7 +13,7 @@ const journey:FeedbackJourney={
  scheduled_departure_ts:'2030-01-02T13:00:00Z',
 };
 
-afterEach(cleanup);
+afterEach(()=>{cleanup();vi.restoreAllMocks()});
 
 describe('JourneyFeedbackForm',()=>{
  it('renders all approved rating fields and defaults testimonial consent to false',()=>{
@@ -30,6 +30,14 @@ describe('JourneyFeedbackForm',()=>{
   expect(screen.getByText('Extremely likely')).toBeTruthy();
   expect(screen.getByLabelText('What went particularly well?')).toBeTruthy();
   expect(screen.getByLabelText('What could we improve?')).toBeTruthy();
+ });
+
+ it('brings the questionnaire into view and focuses its heading when opened',()=>{
+  const scrollIntoView=vi.fn();
+  Element.prototype.scrollIntoView=scrollIntoView;
+  render(<JourneyFeedbackForm journey={journey} onSubmit={vi.fn(async()=>undefined)}/>);
+  expect(document.activeElement).toBe(screen.getByRole('heading',{name:journey.route_name!}));
+  expect(scrollIntoView).toHaveBeenCalledWith({block:'start'});
  });
 
  it('requires all six ratings before submission',async()=>{
