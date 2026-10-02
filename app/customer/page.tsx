@@ -1,8 +1,11 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
+import {CustomerFeedback} from '@/components/customer-feedback';
 import { CustomerSearch } from '@/components/pages';
 
-export default function Page(){
+export default async function Page({searchParams}:{searchParams:Promise<{booking?:string;feedback?:string}>}){
+  const params=await searchParams;
+  const feedbackBooking=params.feedback==='1'&&typeof params.booking==='string'?params.booking:null;
   return (
     <main className="ps-customer-account">
       <header className="ps-customer-header">
@@ -14,13 +17,13 @@ export default function Page(){
       </header>
 
       <section className="ps-customer-content">
-        <div className="ps-customer-title">
+        {!feedbackBooking&&<div className="ps-customer-title">
           <p className="eyebrow">Your Pace Shuttles account</p>
           <h1>My Journeys</h1>
           <p>Bookings, journey updates, refunds and support in one place.</p>
-        </div>
+        </div>}
         <Suspense fallback={<div className="card section">Loading your journeys…</div>}>
-          <CustomerSearch/>
+          {feedbackBooking?<CustomerFeedback bookingId={feedbackBooking}/>:<CustomerSearch/>}
         </Suspense>
       </section>
     </main>
