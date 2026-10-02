@@ -63,6 +63,11 @@ function StarRating({name,question,label,value,onChange}:{name:RatingKey;questio
 }
 
 export function JourneyFeedbackForm({journey,onSubmit,onClose}:Props){
+ const headingRef=useRef<HTMLHeadingElement>(null);
+ useEffect(()=>{
+  headingRef.current?.focus({preventScroll:true});
+  headingRef.current?.scrollIntoView?.({block:'start'});
+ },[journey.booking_id]);
  const [ratings,setRatings]=useState<Ratings>({});
  const [wentWell,setWentWell]=useState('');
  const [couldImprove,setCouldImprove]=useState('');
@@ -96,7 +101,7 @@ export function JourneyFeedbackForm({journey,onSubmit,onClose}:Props){
 
  return <form className="journey-feedback-form" onSubmit={submit} noValidate>
   <div className="feedback-form-head">
-   <div><p className="eyebrow">Two-minute journey feedback</p><h2>{journey.route_name||'Tell us about your journey'}</h2></div>
+   <div><p className="eyebrow">Two-minute journey feedback</p><h2 ref={headingRef} tabIndex={-1}>{journey.route_name||'Tell us about your journey'}</h2></div>
    {onClose?<button className="modal-close" type="button" onClick={onClose} aria-label="Close feedback form">×</button>:null}
   </div>
   <p className="feedback-journey-context"><b>{journey.pickup_name||'Pickup location'}</b><span aria-hidden="true">→</span><b>{journey.destination_name||'Destination'}</b></p>
