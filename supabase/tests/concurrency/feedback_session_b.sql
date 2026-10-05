@@ -1,0 +1,2 @@
+-- Disposable synthetic fixture only. Run while session A is waiting.
+begin;set local statement_timeout='55s';set local application_name='pace_feedback_B';set local role authenticated;select set_config('request.jwt.claim.sub','f1000000-0000-0000-0000-000000000101',true);select public.v2_customer_submit_feedback('f1000000-0000-0000-0000-000000000081'::uuid,3,0,3,5,3,3,null,null,false);reset role;commit;select pg_backend_pid() waiter_pid,quality_score from pace_v2.operators where id='f1000000-0000-0000-0000-000000000007'::uuid;

@@ -8,7 +8,7 @@ const fixtures=vi.hoisted(()=>({
  adminSavePairedJourneyDesign:vi.fn(async()=>({data:[{journey_pair_id:'pair-1'}],error:null})),
  adminLoadPairedJourneyDesign:vi.fn(async()=>({data:[] as any[],error:null})),
  adminLoadRouteReturnMappingOptions:vi.fn(async()=>({data:[] as any[],error:null})),
- adminSaveRouteReturnMapping:vi.fn(async()=>({data:null,error:null}))
+ adminSaveRouteReturnMapping:vi.fn(async():Promise<{data:null;error:null|{message:string}}>=>({data:null,error:null}))
 }));
 
 vi.mock('@/lib/data',()=>({

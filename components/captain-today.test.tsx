@@ -434,7 +434,7 @@ describe('CaptainToday',()=>{
  it('does not refresh or write after unmount while an end RPC rejects',async()=>{
   let reject:(reason:unknown)=>void=()=>{};
   const started={...pairedReadyDuty,leg_1_started_at:'2030-06-10T09:05:00Z',duty_state:'leg_1_in_progress'};
-  const actions=legActions({endLeg:vi.fn((_:string,_state:'normal'|'incident',_notes:string,_summary:string):Promise<CaptainTodayActionResult>=>new Promise((_done,fail)=>{reject=fail;}))});
+  const actions=legActions({endLeg:vi.fn((_:string,_allocationId:string,_state:'normal'|'incident',_notes:string,_summary:string):Promise<CaptainTodayActionResult>=>new Promise((_done,fail)=>{reject=fail;}))});
   const reload=vi.fn(emptyReload);
   const consoleError=vi.spyOn(console,'error').mockImplementation(()=>{});
   const view=render(<CaptainToday duties={[started]} manifest={[]} now={now} onSelectedDutyIdChange={vi.fn()} actions={actions} onReload={reload}/>);
