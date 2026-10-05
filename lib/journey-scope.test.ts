@@ -4,7 +4,7 @@ import {journeyScopeSpec,TERMINAL_JOURNEY_STATUSES} from './journey-scope';
 describe('journeyScopeSpec',()=>{
  it('starts the default operational view at midnight today in Antigua',()=>{
   const spec=journeyScopeSpec('operational',new Date('2026-09-15T12:00:00Z'));
-  expect(spec.excludedStatuses).toBeUndefined();
+  expect(spec).not.toHaveProperty('excludedStatuses');
   expect(spec.since).toBe('2026-09-15T04:00:00.000Z');
   expect(spec.before).toBeUndefined();
   expect(spec.ascending).toBe(true);

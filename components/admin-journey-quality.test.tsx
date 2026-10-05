@@ -107,6 +107,17 @@ describe('Site Admin quality reporting',()=>{
   expect(within(operatorRow).getByText('0.82')).toBeTruthy();
  });
 
+ it('shows captain averages and trends separately without inventing unrated scores',()=>{
+  render(<AdminQualityPerformance dashboard={{platform:{nps:0,response_count:2},operators:[],captains:[{id:'rated',name:'Rated Captain',average:4.5,response_count:2,trend:1},{id:'unrated',name:'Unrated Captain',average:null,response_count:0,trend:null}],pickups:[],destinations:[]}} recent={[]}/>);
+  const rated=screen.getByText('Rated Captain').closest('tr')!;
+  expect(rated.textContent).toContain('4.50/5');
+  expect(within(rated).getByText('2')).toBeTruthy();
+  expect(rated.textContent).toContain('↑ 1.00 vs prior 30 days');
+  const unrated=screen.getByText('Unrated Captain').closest('tr')!;
+  expect(unrated.textContent).toContain('—/5');
+  expect(within(unrated).getByText('0')).toBeTruthy();
+ });
+
  it('renders every protected operator and excludes null legacy ratings from displayed aggregates',()=>{
   render(<AdminQualityPerformance dashboard={{platform:{nps:null,promoters:0,passives:0,detractors:0,booking_experience_average:null,response_count:0,trend:null},operators:[{id:'with-feedback',name:'With feedback',quality_score:0.75,response_count:1,operator_average:4,captain_average:4,trend:null,attribution_states:[]},{id:'without-feedback',name:'Without feedback',quality_score:0.91,response_count:0,operator_average:null,captain_average:null,trend:null,attribution_states:[]}],captains:[],pickups:[],destinations:[]}} recent={[]}/>);
   expect(screen.getByText('Without feedback')).toBeTruthy();

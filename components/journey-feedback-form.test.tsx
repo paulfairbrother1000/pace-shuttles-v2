@@ -104,7 +104,7 @@ describe('JourneyFeedbackForm',()=>{
 
  it('opens one deep-linked journey, persists success in the parent projection, and offers no second path after close',async()=>{
   window.history.replaceState({},'',`/customer?booking=${journey.booking_id}&feedback=1`);
-  const submit=vi.fn(async()=>undefined);
+  const submit=vi.fn(async(_input:unknown)=>undefined);
   function Harness(){
    const flow=useJourneyFeedbackFlow([journey],[]);
    return <>{flow.selected?<JourneyFeedbackForm journey={flow.selected} onSubmit={async input=>{await submit(input);flow.markSubmitted(flow.selected!.booking_id)}} onClose={flow.close}/>:null}{!flow.hasFeedback(journey.booking_id)?<button onClick={()=>flow.open(journey)}>Rate journey</button>:null}</>;
