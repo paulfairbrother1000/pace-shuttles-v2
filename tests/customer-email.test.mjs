@@ -25,7 +25,11 @@ async function loadDispatcher() {
   const journeyContent = ts.transpileModule(readFileSync(journeyContentPath, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
   }).outputText.replaceAll('export ', '');
+  const refundBuilder = ts.transpileModule(readFileSync(new URL('../lib/refund-admin-email.ts', import.meta.url), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
+  }).outputText.replaceAll('export ', '');
   const source = readFileSync(path, 'utf8')
+    .replace("import {buildRefundAdminEmail} from './refund-admin-email';", refundBuilder)
     .replace("import {createClient} from '@supabase/supabase-js';", '')
     .replace("import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';", builder)
     .replace("import {buildFeedbackEmail} from './feedback-email-content';", feedbackBuilder)
@@ -279,4 +283,16 @@ test('post-journey feedback dispatch uses the canonical builder and first-name m
   });
   assert.equal(outbound.subject,'Thank you for travelling with Pace Shuttles – one more thing…');
   assert.equal(outbound.text,'Hi Paul,\n\nThank you for travelling with Pace Shuttles. We hope you had a wonderful journey in British Virgin Islands, travelling from Nanny Cay Marina to The Soggy Dollar.\n\nWe’d really appreciate your feedback about what went well and what we could improve. Your response will help Pace Shuttles, your operator, captain, pickup location and destination continue improving the experience provided to customers.\n\nShare your feedback\nhttps://www.paceshuttles.com/customer?booking=booking-1&feedback=1\n\nThe survey should take no more than two minutes.\n\nThank you again for choosing Pace Shuttles.\n\nRegards,\nThe Pace Shuttles Team');
+});
+
+
+test('admin refund emails include authenticated action links and escaped content', async () => {
+  const {dispatchDueCustomerEmails}=await loadDispatcher(); let outbound;
+  const refundId='b4fa0047-594d-48a1-8571-5c68d2acdaa4';
+  const refundRow={...row,template_code:'REFUND_ACTION_REQUIRED_ADMIN',body:'Refund $50 <customer>',metadata:{refund_request_id:refundId}};
+  const result=await dispatchDueCustomerEmails(1,{env,createClient:()=>({rpc:async name=>name==='v2_system_claim_due_customer_emails_with_metadata'?{data:[refundRow],error:null}:{error:null}}),fetchImpl:async(_url,request)=>{outbound=JSON.parse(request.body);return {ok:true,json:async()=>({id:'refund-admin'})};}});
+  assert.equal(result.sent,1);
+  assert.ok(outbound.html.includes(`/admin/refunds/${refundId}?action=execute`));
+  assert.ok(outbound.html.includes(`/admin/refunds/${refundId}?action=decline`));
+  assert.ok(outbound.html.includes('&lt;customer&gt;'));
 });
