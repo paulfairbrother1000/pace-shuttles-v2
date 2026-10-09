@@ -43,7 +43,15 @@ export async function POST(req:Request){
 
   const s=createClient(SUPABASE_URL,key,{auth:{persistSession:false}});
   try{
-    if(orderId&&(event.type==='checkout.session.completed'||event.type==='checkout.session.async_payment_succeeded')){
+    if(['refund.created','refund.updated','refund.failed'].includes(event.type)&&obj.metadata?.pace_refund_request_id){
+      const {error}=await s.rpc('v2_system_finish_admin_refund',{
+        p_refund_request_id:obj.metadata.pace_refund_request_id,
+        p_provider_refund_id:obj.id,p_status:obj.status,p_amount_cents:obj.amount,
+        p_currency:obj.currency,p_payment_intent_id:typeof obj.payment_intent==='string'?obj.payment_intent:obj.payment_intent?.id,
+        p_failure_reason:obj.failure_reason||null
+      });
+      if(error)throw error;
+    }else if(orderId&&(event.type==='checkout.session.completed'||event.type==='checkout.session.async_payment_succeeded')){
       const {error:paidError}=await s.rpc('v2_system_mark_stripe_paid',{
         p_order_id:orderId,
         p_session_id:obj.id||'',

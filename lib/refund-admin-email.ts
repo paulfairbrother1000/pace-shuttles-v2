@@ -1,0 +1,6 @@
+const esc=(v:string)=>v.replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]||ch));
+export function buildRefundAdminEmail(subject:string,body:string,refundId:string){
+ if(!/^[0-9a-f-]{36}$/i.test(refundId))return null;
+ const base=`https://www.paceshuttles.com/admin/refunds/${refundId}`;
+ return {html:`<!doctype html><html><body style="font-family:Arial,sans-serif;color:#173042;background:#f4f7f9;padding:24px"><div style="max-width:640px;background:white;padding:28px;margin:auto;border-radius:12px"><h1 style="font-size:24px">${esc(subject)}</h1><pre style="font-family:Arial,sans-serif;white-space:pre-wrap;line-height:1.5">${esc(body)}</pre><p><a href="${base}?action=execute" style="display:inline-block;background:#075bff;color:white;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Approve and execute refund</a></p><p><a href="${base}?action=decline" style="display:inline-block;border:1px solid #a33434;color:#a33434;padding:14px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Decline refund</a></p><p><a href="https://www.paceshuttles.com/admin/finance">Review all refunds</a></p><p style="font-size:12px">Site Admin sign-in is required. Opening a link shows the request; the action button on that page submits your decision.</p></div></body></html>`};
+}
