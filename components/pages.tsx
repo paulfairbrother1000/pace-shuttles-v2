@@ -224,7 +224,7 @@ export function Network(){
   if(!form.pickup_id||!form.destination_id)return setMsg('Select a pickup and destination');
   if(!form.vehicle_type_id)return setMsg('Select a vehicle type');
   if(!types.some(x=>x.id===form.vehicle_type_id&&x.active!==false))return setMsg('Choose an active vehicle type');
-  if(!Number.isInteger(dur)||dur<=0)return setMsg('Journey duration must be a whole number greater than zero');
+  if(dur===null||!Number.isInteger(dur)||dur<=0)return setMsg('Journey duration must be a whole number greater than zero');
   const weekdays=[...new Set<number>((Array.isArray(form.days_of_week)?form.days_of_week:[]).map((x:any)=>Number(x)))].filter(x=>Number.isInteger(x)&&x>=0&&x<=6).sort((a,b)=>a-b);
   if(!weekdays.length)return setMsg('Select at least one departure day');
   if(!form.departure_time)return setMsg('Departure time is required');
