@@ -30,11 +30,15 @@ begin
     raise exception 'site admin required';
   end if;
 
+  if not exists(select 1 from pace_v2.vehicle_types where id=p_vehicle_type_id and active) then
+    raise exception 'active vehicle type required';
+  end if;
+
   if p_days_of_week is null
      or cardinality(p_days_of_week)=0
      or not (p_days_of_week <@ array[0,1,2,3,4,5,6]::smallint[])
      or cardinality(p_days_of_week) <> (
-       select count(distinct day_value) from unnest(p_days_of_week) day_value
+       select count(distinct d.day_value) from unnest(p_days_of_week) as d(day_value)
      ) then
     raise exception 'select one or more unique weekdays';
   end if;
@@ -44,6 +48,9 @@ begin
   end if;
   if p_valid_from is null or p_valid_to is null or p_valid_to < p_valid_from then
     raise exception 'valid season start and end dates are required';
+  end if;
+  if p_valid_to-p_valid_from>366 then
+    raise exception 'season windows must be 366 days or less';
   end if;
   if p_approx_duration_mins is null or p_approx_duration_mins <= 0 then
     raise exception 'journey duration must be greater than zero';
@@ -81,6 +88,8 @@ begin
     p_valid_from,
     null
   );
+
+  perform public.v2_admin_generate_departures(p_valid_from,p_valid_to);
 
   return v_route_id;
 end
