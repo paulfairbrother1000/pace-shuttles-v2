@@ -3,6 +3,8 @@ import React,{useEffect,useRef,useState} from 'react';
 import {
  adminLoadPairedJourneyDesign,
  adminLoadRouteReturnMappingOptions,
+ adminSaveServiceSchedule,
+ adminGenerateDepartures,
  adminSavePairedJourneyDesign,
  adminSaveRouteReturnMapping
 } from '@/lib/data';
@@ -16,6 +18,13 @@ type MappingOptions={
 };
 type AdminServiceEditorProps={
  serviceId:string;
+ daysOfWeek?:number[];
+ validFrom?:string|null;
+ validTo?:string|null;
+ recurrenceType?:string;
+ recurrenceIntervalWeeks?:number;
+ recurrenceAnchorDate?:string|null;
+ onSaved?:()=>void;
  outboundLocalTime:string|null|undefined;
  returnEnabled?:boolean;
  returnLocalTime?:string|null;
@@ -35,8 +44,13 @@ const activeRoutes=(routes:unknown,fallback:ReturnRoute[]=EMPTY_RETURN_ROUTES)=>
   .sort((left,right)=>(left.route_name||left.name||left.id).localeCompare(right.route_name||right.name||right.id)||left.id.localeCompare(right.id));
 };
 
-export function AdminServiceEditor({serviceId,outboundLocalTime,returnEnabled=false,returnLocalTime,returnDurationMinutes,returnRouteId,returnRoutes=EMPTY_RETURN_ROUTES}:AdminServiceEditorProps){
+const WEEKDAYS=[['Sun',0],['Mon',1],['Tue',2],['Wed',3],['Thu',4],['Fri',5],['Sat',6]] as const;
+const DEFAULT_DAYS:number[]=[];
+export function AdminServiceEditor({serviceId,daysOfWeek=DEFAULT_DAYS,validFrom='',validTo='',recurrenceType='weekly',recurrenceIntervalWeeks=1,recurrenceAnchorDate,onSaved,outboundLocalTime,returnEnabled=false,returnLocalTime,returnDurationMinutes,returnRouteId,returnRoutes=EMPTY_RETURN_ROUTES}:AdminServiceEditorProps){
  const [outboundTime,setOutboundTime]=useState(asTime(outboundLocalTime));
+ const [serviceDays,setServiceDays]=useState<number[]>(daysOfWeek);
+ const [seasonFrom,setSeasonFrom]=useState(String(validFrom||''));
+ const [seasonTo,setSeasonTo]=useState(String(validTo||''));
  const [hasReturn,setHasReturn]=useState(returnEnabled);
  const [returnTime,setReturnTime]=useState(asTime(returnLocalTime));
  const [returnDuration,setReturnDuration]=useState(returnDurationMinutes==null?'':String(returnDurationMinutes));
@@ -77,6 +91,9 @@ export function AdminServiceEditor({serviceId,outboundLocalTime,returnEnabled=fa
   const request=++generation.current;
   let active=true;
   setOutboundTime(asTime(outboundLocalTime));
+  setServiceDays(Array.isArray(daysOfWeek)?daysOfWeek:[]);
+  setSeasonFrom(String(validFrom||''));
+  setSeasonTo(String(validTo||''));
   setHasReturn(returnEnabled);
   setReturnTime(asTime(returnLocalTime));
   setReturnDuration(returnDurationMinutes==null?'':String(returnDurationMinutes));
@@ -102,24 +119,35 @@ export function AdminServiceEditor({serviceId,outboundLocalTime,returnEnabled=fa
    if(active&&request===generation.current){setMessage({kind:'error',text:errorText(error)});setLoadFailed(true)}
   }).finally(()=>{if(active&&request===generation.current)setHydrating(false)});
   return()=>{active=false};
- },[serviceId,outboundLocalTime,returnEnabled,returnLocalTime,returnDurationMinutes,returnRouteId,returnRoutes,loadAttempt]);
+ },[serviceId,outboundLocalTime,returnEnabled,returnLocalTime,returnDurationMinutes,returnRouteId,returnRoutes,daysOfWeek,validFrom,validTo,loadAttempt]);
 
  const saveDesign=async()=>{
   const request=generation.current;
   setMessage(null);
   const duration=returnDuration.trim()===''?null:Number(returnDuration);
-  if(!outboundTime){setMessage({kind:'error',text:'Outbound start time is required.'});return}
+  if(!outboundTime){setMessage({kind:'error',text:'Outbound departure time is required.'});return}
   if(hasReturn&&!reverseRouteId){setMessage({kind:'error',text:'Choose an eligible return route.'});return}
   if(hasReturn&&!eligibleRoutes.some(route=>route.id===reverseRouteId)){setMessage({kind:'error',text:'Choose an eligible return route.'});return}
   if(hasReturn&&!returnTime){setMessage({kind:'error',text:'Return pickup time at destination is required.'});return}
   if(hasReturn&&duration===null){setMessage({kind:'error',text:'Return duration is required.'});return}
   if(hasReturn&&duration!==null&&(!Number.isInteger(duration)||duration<=0)){setMessage({kind:'error',text:'Return duration must be a positive whole number of minutes.'});return}
+  if(serviceDays.length===0){setMessage({kind:'error',text:'Choose at least one operating day.'});return}
+  if(!seasonFrom){setMessage({kind:'error',text:'Season start date is required.'});return}
+  if(seasonTo&&seasonTo<seasonFrom){setMessage({kind:'error',text:'Season end date must be on or after the start date.'});return}
   setSaving(true);
   try{
+   const schedule=await adminSaveServiceSchedule({p_service_id:serviceId,p_days_of_week:serviceDays,p_departure_time:outboundTime,p_valid_from:seasonFrom,p_valid_to:seasonTo||null,p_recurrence_type:recurrenceType,p_recurrence_interval_weeks:recurrenceIntervalWeeks,p_recurrence_anchor_date:recurrenceAnchorDate||seasonFrom});
+   if(schedule.error){setMessage({kind:'error',text:errorText(schedule.error)});return}
+   const generationFrom=seasonFrom>new Date().toISOString().slice(0,10)?seasonFrom:new Date().toISOString().slice(0,10);
+   if(seasonTo&&seasonTo>=generationFrom){
+    const generated=await adminGenerateDepartures(generationFrom,seasonTo);
+    if(generated.error){setMessage({kind:'error',text:`Schedule saved, but departures could not be generated: ${errorText(generated.error)}`});return}
+   }
    const result=await adminSavePairedJourneyDesign({serviceId,outboundLocalTime:outboundTime,returnEnabled:hasReturn,returnLocalTime:hasReturn?returnTime:null,returnDurationMinutes:hasReturn?duration:null,reverseRouteId:hasReturn?reverseRouteId:null});
    if(request!==generation.current)return;
-   if(result.error){setMessage({kind:'error',text:errorText(result.error)});return}
-   setMessage({kind:'success',text:'Journey design saved.'});
+   if(result.error){setMessage({kind:'error',text:`Schedule saved, but journey details could not be saved: ${errorText(result.error)}`});return}
+   setMessage({kind:'success',text:'Schedule and journey details saved.'});
+   onSaved?.();
   }catch(error){if(request===generation.current)setMessage({kind:'error',text:errorText(error)})}
   finally{if(request===generation.current)setSaving(false)}
  };
@@ -157,12 +185,18 @@ export function AdminServiceEditor({serviceId,outboundLocalTime,returnEnabled=fa
    <label className="form-field"><span>Mapped return route</span><select aria-label="Mapped return route" disabled={mappingDisabled} value={mappedRouteId} onChange={event=>{setMappedRouteId(event.target.value);setMessage(null)}}><option value="">Select an eligible same-country route</option>{mappingRoutes.map(route=><option key={route.id} value={route.id}>{route.route_name||route.name||route.id}</option>)}</select></label>
    <div className="action-buttons"><button className="btn secondary" type="button" disabled={mappingDisabled||!mappedRouteId} onClick={()=>{void saveMapping()}}>{mappingSaving?'Saving route mapping…':'Save return route mapping'}</button></div>
   </fieldset>
-  <label className="form-field"><span>Outbound start time</span><input aria-label="Outbound start time" type="time" required disabled={disabled} value={outboundTime} onChange={event=>setOutboundTime(event.target.value)}/></label>
+  <fieldset className="form-grid" disabled={disabled}>
+   <legend>Weekly schedule and season</legend>
+   <div className="form-field"><span>Operating days</span><div className="check-list" role="group" aria-label="Operating days">{WEEKDAYS.map(([label,day])=><label className={serviceDays.includes(day)?'check-row checked':'check-row'} key={day}><input type="checkbox" checked={serviceDays.includes(day)} onChange={event=>setServiceDays(current=>event.target.checked?[...new Set([...current,day])].sort((a,b)=>a-b):current.filter(value=>value!==day))}/><span>{label}</span></label>)}</div></div>
+   <label className="form-field"><span>Outbound departure time</span><input aria-label="Outbound departure time" type="time" required value={outboundTime} onChange={event=>setOutboundTime(event.target.value)}/></label>
+   <label className="form-field"><span>Season starts</span><input aria-label="Season starts" type="date" required value={seasonFrom} onChange={event=>setSeasonFrom(event.target.value)}/></label>
+   <label className="form-field"><span>Season ends</span><input aria-label="Season ends" type="date" value={seasonTo} onChange={event=>setSeasonTo(event.target.value)}/></label>
+  </fieldset>
   <label className="form-field"><span>Return journey</span><input aria-label="Return journey" type="checkbox" disabled={disabled} checked={hasReturn} onChange={event=>setHasReturn(event.target.checked)}/></label>
   <label className="form-field"><span>Return route</span><select aria-label="Return route" disabled={!hasReturn||disabled} value={reverseRouteId} onChange={event=>setReverseRouteId(event.target.value)}><option value="">Select the mapped operational return route</option>{eligibleRoutes.map(route=><option key={route.id} value={route.id}>{route.route_name||route.name||route.id}</option>)}</select></label>
   <label className="form-field"><span>Return pickup time at destination</span><input aria-label="Return pickup time at destination" type="time" disabled={!hasReturn||disabled} required={hasReturn} value={returnTime} onChange={event=>setReturnTime(event.target.value)}/></label>
   <label className="form-field"><span>Return duration (minutes)</span><input aria-label="Return duration (minutes)" type="number" min="1" step="1" disabled={!hasReturn||disabled} required={hasReturn} value={returnDuration} onChange={event=>setReturnDuration(event.target.value)}/></label>
-  <div className="action-buttons"><button className="btn" type="submit" disabled={disabled}>{hydrating?'Loading journey design…':saving?'Saving…':'Save journey design'}</button>{loadFailed?<button className="btn secondary" type="button" onClick={()=>setLoadAttempt(attempt=>attempt+1)}>Retry loading journey design</button>:null}</div>
+  <div className="action-buttons"><button className="btn" type="submit" disabled={disabled}>{hydrating?'Loading journey design…':saving?'Saving schedule & journey…':'Save schedule & journey'}</button>{loadFailed?<button className="btn secondary" type="button" onClick={()=>setLoadAttempt(attempt=>attempt+1)}>Retry loading journey design</button>:null}</div>
   {message?<p className={message.kind==='success'?'action-success':'action-error'} role={message.kind==='success'?'status':'alert'}>{message.text}</p>:null}
  </form>;
 }

@@ -6,6 +6,8 @@ import {afterEach,describe,expect,it,vi} from 'vitest';
 
 const fixtures=vi.hoisted(()=>({
  adminSavePairedJourneyDesign:vi.fn(async()=>({data:[{journey_pair_id:'pair-1'}],error:null})),
+ adminSaveServiceSchedule:vi.fn(async()=>({data:null,error:null})),
+ adminGenerateDepartures:vi.fn(async()=>({data:[],error:null})),
  adminLoadPairedJourneyDesign:vi.fn(async()=>({data:[] as any[],error:null})),
  adminLoadRouteReturnMappingOptions:vi.fn(async()=>({data:[] as any[],error:null})),
  adminSaveRouteReturnMapping:vi.fn(async():Promise<{data:null;error:null|{message:string}}>=>({data:null,error:null}))
@@ -13,20 +15,27 @@ const fixtures=vi.hoisted(()=>({
 
 vi.mock('@/lib/data',()=>({
  adminSavePairedJourneyDesign:fixtures.adminSavePairedJourneyDesign,
+ adminSaveServiceSchedule:fixtures.adminSaveServiceSchedule,
+ adminGenerateDepartures:fixtures.adminGenerateDepartures,
  adminLoadPairedJourneyDesign:fixtures.adminLoadPairedJourneyDesign,
  adminLoadRouteReturnMappingOptions:fixtures.adminLoadRouteReturnMappingOptions,
  adminSaveRouteReturnMapping:fixtures.adminSaveRouteReturnMapping
 }));
 
-import {AdminServiceEditor} from './admin-service-editor';
+import {AdminServiceEditor as AdminServiceEditorComponent} from './admin-service-editor';
+const AdminServiceEditor=(props:React.ComponentProps<typeof AdminServiceEditorComponent>)=><AdminServiceEditorComponent daysOfWeek={[3]} validFrom="2026-11-01" {...props}/>;
 
 afterEach(()=>{
  cleanup();
  fixtures.adminSavePairedJourneyDesign.mockReset();
+ fixtures.adminSaveServiceSchedule.mockReset();
+ fixtures.adminGenerateDepartures.mockReset();
  fixtures.adminLoadPairedJourneyDesign.mockReset();
  fixtures.adminLoadRouteReturnMappingOptions.mockReset();
  fixtures.adminSaveRouteReturnMapping.mockReset();
  fixtures.adminSavePairedJourneyDesign.mockResolvedValue({data:[{journey_pair_id:'pair-1'}],error:null});
+ fixtures.adminSaveServiceSchedule.mockResolvedValue({data:null,error:null});
+ fixtures.adminGenerateDepartures.mockResolvedValue({data:[],error:null});
  fixtures.adminLoadPairedJourneyDesign.mockResolvedValue({data:[],error:null});
  fixtures.adminLoadRouteReturnMappingOptions.mockResolvedValue({data:[],error:null});
  fixtures.adminSaveRouteReturnMapping.mockResolvedValue({data:null,error:null});
@@ -36,16 +45,16 @@ describe('AdminServiceEditor',()=>{
  it('submits and reports a disabled-return outbound time edit',async()=>{
   const user=userEvent.setup();
   render(<AdminServiceEditor serviceId="service-outbound" outboundLocalTime="09:00"/>);
-  await waitFor(()=>expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(false));
-  await user.clear(screen.getByLabelText('Outbound start time'));
-  await user.type(screen.getByLabelText('Outbound start time'),'09:30');
-  await user.click(screen.getByRole('button',{name:'Save journey design'}));
+  await waitFor(()=>expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(false));
+  await user.clear(screen.getByLabelText('Outbound departure time'));
+  await user.type(screen.getByLabelText('Outbound departure time'),'09:30');
+  await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
 
   await waitFor(()=>expect(fixtures.adminSavePairedJourneyDesign).toHaveBeenCalledWith({
    serviceId:'service-outbound',outboundLocalTime:'09:30',returnEnabled:false,
    returnLocalTime:null,returnDurationMinutes:null,reverseRouteId:null
   }));
-  expect((await screen.findByRole('status')).textContent).toContain('Journey design saved');
+  expect((await screen.findByRole('status')).textContent).toContain('Schedule and journey details saved');
  });
 
  it('shows the return controls and sends the typed paired-design payload',async()=>{
@@ -64,13 +73,38 @@ describe('AdminServiceEditor',()=>{
   await user.clear(returnDuration);
   await user.type(returnDuration,'30');
   await user.selectOptions(screen.getByLabelText('Return route'),'return-route-1');
-  await user.click(screen.getByRole('button',{name:'Save journey design'}));
+  await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
 
   await waitFor(()=>expect(fixtures.adminSavePairedJourneyDesign).toHaveBeenCalledWith({
    serviceId:'service-1',outboundLocalTime:'10:00',returnEnabled:true,
    returnLocalTime:'16:00',returnDurationMinutes:30,reverseRouteId:'return-route-1'
   }));
-  expect((await screen.findByRole('status')).textContent).toContain('Journey design saved');
+  expect((await screen.findByRole('status')).textContent).toContain('Schedule and journey details saved');
+ });
+
+ it('saves an existing service weekday and season, generates those dates, then saves its return pickup',async()=>{
+  const user=userEvent.setup();
+  render(<AdminServiceEditor serviceId="seasonal-service" outboundLocalTime="11:15" daysOfWeek={[2,3]} validFrom="2026-08-23" returnEnabled returnLocalTime="14:00" returnDurationMinutes={30} returnRouteId="return-route" returnRoutes={[{id:'return-route',route_name:'Nobu → St Marys'}]}/>);
+  await waitFor(()=>expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(false));
+  await user.click(screen.getByLabelText('Tue'));
+  await user.clear(screen.getByLabelText('Outbound departure time'));
+  await user.type(screen.getByLabelText('Outbound departure time'),'10:00');
+  await user.clear(screen.getByLabelText('Season starts'));
+  await user.type(screen.getByLabelText('Season starts'),'2026-11-01');
+  await user.type(screen.getByLabelText('Season ends'),'2027-06-30');
+  await user.clear(screen.getByLabelText('Return pickup time at destination'));
+  await user.type(screen.getByLabelText('Return pickup time at destination'),'16:00');
+  await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
+
+  await waitFor(()=>expect(fixtures.adminSaveServiceSchedule).toHaveBeenCalledWith({
+   p_service_id:'seasonal-service',p_days_of_week:[3],p_departure_time:'10:00',p_valid_from:'2026-11-01',p_valid_to:'2027-06-30',
+   p_recurrence_type:'weekly',p_recurrence_interval_weeks:1,p_recurrence_anchor_date:'2026-11-01'
+  }));
+  expect(fixtures.adminGenerateDepartures).toHaveBeenCalledWith('2026-11-01','2027-06-30');
+  expect(fixtures.adminSavePairedJourneyDesign).toHaveBeenCalledWith({
+   serviceId:'seasonal-service',outboundLocalTime:'10:00',returnEnabled:true,
+   returnLocalTime:'16:00',returnDurationMinutes:30,reverseRouteId:'return-route'
+  });
  });
 
  it('keeps entered values visible when protected return removal is refused',async()=>{
@@ -79,10 +113,10 @@ describe('AdminServiceEditor',()=>{
   render(<AdminServiceEditor serviceId="service-2" outboundLocalTime="09:00" returnEnabled returnLocalTime="15:30" returnDurationMinutes={45} returnRouteId="return-route-2" returnRoutes={[{id:'return-route-2',route_name:'Harbour return'}]}/>);
 
   await user.click(screen.getByLabelText('Return journey'));
-  await user.click(screen.getByRole('button',{name:'Save journey design'}));
+  await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
 
   expect((await screen.findByRole('alert')).textContent).toContain('return journey cannot be removed');
-  expect((screen.getByLabelText('Outbound start time') as HTMLInputElement).value).toBe('09:00');
+  expect((screen.getByLabelText('Outbound departure time') as HTMLInputElement).value).toBe('09:00');
   expect((screen.getByLabelText('Return pickup time at destination') as HTMLInputElement).value).toBe('15:30');
  expect((screen.getByLabelText('Return duration (minutes)') as HTMLInputElement).value).toBe('45');
  });
@@ -92,7 +126,7 @@ describe('AdminServiceEditor',()=>{
   render(<AdminServiceEditor serviceId="service-3" outboundLocalTime="09:00" returnRoutes={[{id:'return-route-3',route_name:'Harbour return'}]}/>);
 
   await waitFor(()=>expect((screen.getByLabelText('Return journey') as HTMLInputElement).checked).toBe(true));
-  expect((screen.getByLabelText('Outbound start time') as HTMLInputElement).value).toBe('10:00');
+  expect((screen.getByLabelText('Outbound departure time') as HTMLInputElement).value).toBe('10:00');
   expect((screen.getByLabelText('Return pickup time at destination') as HTMLInputElement).value).toBe('16:00');
   expect((screen.getByLabelText('Return duration (minutes)') as HTMLInputElement).value).toBe('30');
   expect((screen.getByLabelText('Return route') as HTMLSelectElement).value).toBe('return-route-3');
@@ -109,7 +143,7 @@ describe('AdminServiceEditor',()=>{
 
   await waitFor(()=>expect(fixtures.adminLoadPairedJourneyDesign).toHaveBeenLastCalledWith('service-5'));
   expect((screen.getByLabelText('Return journey') as HTMLInputElement).checked).toBe(false);
-  expect((screen.getByLabelText('Outbound start time') as HTMLInputElement).value).toBe('11:15');
+  expect((screen.getByLabelText('Outbound departure time') as HTMLInputElement).value).toBe('11:15');
   expect((screen.getByLabelText('Return pickup time at destination') as HTMLInputElement).value).toBe('');
   expect((screen.getByLabelText('Return duration (minutes)') as HTMLInputElement).value).toBe('');
  });
@@ -123,9 +157,9 @@ it('fails closed after a load error until the current service is retried success
  expect((screen.getByRole('button',{name:'Loading journey design…'}) as HTMLButtonElement).disabled).toBe(true);
  rejectLoad(new Error('Could not load saved journey design'));
  expect((await screen.findByRole('alert')).textContent).toContain('Could not load saved journey design');
- expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(true);
+ expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(true);
  await userEvent.setup().click(screen.getByRole('button',{name:'Retry loading journey design'}));
- await waitFor(()=>expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(false));
+ await waitFor(()=>expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(false));
 });
 
 it('does not report an old service save after the service changes',async()=>{
@@ -134,11 +168,11 @@ it('does not report an old service save after the service changes',async()=>{
  fixtures.adminLoadPairedJourneyDesign.mockResolvedValue({data:[],error:null});
  const user=userEvent.setup();
  const {rerender}=render(<AdminServiceEditor serviceId="service-7" outboundLocalTime="09:00"/>);
- await waitFor(()=>expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(false));
- await user.click(screen.getByRole('button',{name:'Save journey design'}));
+ await waitFor(()=>expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(false));
+ await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
  rerender(<AdminServiceEditor serviceId="service-8" outboundLocalTime="11:00"/>);
  resolveSave({data:[{journey_pair_id:'pair-7'}],error:null});
- await waitFor(()=>expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(false));
+ await waitFor(()=>expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(false));
  expect(screen.queryByRole('status')).toBeNull();
 });
 
@@ -146,10 +180,10 @@ it('reports a rejected save and always clears the save busy state',async()=>{
  fixtures.adminSavePairedJourneyDesign.mockRejectedValueOnce(new Error('Network interrupted'));
  const user=userEvent.setup();
  render(<AdminServiceEditor serviceId="service-9" outboundLocalTime="09:00"/>);
- await waitFor(()=>expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(false));
- await user.click(screen.getByRole('button',{name:'Save journey design'}));
+ await waitFor(()=>expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(false));
+ await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
  expect((await screen.findByRole('alert')).textContent).toContain('Network interrupted');
- expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(false);
+ expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(false);
 });
 
 it('offers only active mapped return routes loaded for this service',async()=>{
@@ -163,8 +197,8 @@ it('offers only active mapped return routes loaded for this service',async()=>{
 it('refuses an invalid return route before calling save',async()=>{
  const user=userEvent.setup();
  render(<AdminServiceEditor serviceId="service-11" outboundLocalTime="09:00" returnEnabled returnLocalTime="16:00" returnDurationMinutes={30} returnRouteId="unmapped" returnRoutes={[{id:'mapped',route_name:'Mapped route',is_active:true}]}/>);
- await waitFor(()=>expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(false));
- await user.click(screen.getByRole('button',{name:'Save journey design'}));
+ await waitFor(()=>expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(false));
+ await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
  expect((await screen.findByRole('alert')).textContent).toContain('Choose an eligible return route');
  expect(fixtures.adminSavePairedJourneyDesign).not.toHaveBeenCalled();
 });
@@ -172,15 +206,15 @@ it('refuses an invalid return route before calling save',async()=>{
 it('shows explicit validation errors for missing return fields and invalid minutes',async()=>{
  const user=userEvent.setup();
  render(<AdminServiceEditor serviceId="service-12" outboundLocalTime="09:00" returnEnabled returnRoutes={[{id:'mapped',route_name:'Mapped route',is_active:true}]}/>);
- await waitFor(()=>expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(false));
+ await waitFor(()=>expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(false));
  await user.selectOptions(screen.getByLabelText('Return route'),'mapped');
- await user.click(screen.getByRole('button',{name:'Save journey design'}));
+ await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
  expect((await screen.findByRole('alert')).textContent).toContain('Return pickup time at destination is required');
  await user.type(screen.getByLabelText('Return pickup time at destination'),'16:00');
- await user.click(screen.getByRole('button',{name:'Save journey design'}));
+ await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
  expect((await screen.findByRole('alert')).textContent).toContain('Return duration is required');
  await user.type(screen.getByLabelText('Return duration (minutes)'),'1.5');
- await user.click(screen.getByRole('button',{name:'Save journey design'}));
+ await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
  expect((await screen.findByRole('alert')).textContent).toContain('positive whole number');
  expect(fixtures.adminSavePairedJourneyDesign).not.toHaveBeenCalled();
 });
@@ -188,10 +222,10 @@ it('shows explicit validation errors for missing return fields and invalid minut
 it('shows an explicit outbound-time error instead of browser validation',async()=>{
  const user=userEvent.setup();
  render(<AdminServiceEditor serviceId="service-13" outboundLocalTime="09:00"/>);
- await waitFor(()=>expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(false));
- await user.clear(screen.getByLabelText('Outbound start time'));
- await user.click(screen.getByRole('button',{name:'Save journey design'}));
- expect((await screen.findByRole('alert')).textContent).toContain('Outbound start time is required');
+ await waitFor(()=>expect((screen.getByRole('button',{name:'Save schedule & journey'}) as HTMLButtonElement).disabled).toBe(false));
+ await user.clear(screen.getByLabelText('Outbound departure time'));
+ await user.click(screen.getByRole('button',{name:'Save schedule & journey'}));
+ expect((await screen.findByRole('alert')).textContent).toContain('Outbound departure time is required');
 });
 
 it('bootstraps an empty route mapping and refreshes the return design choices',async()=>{
