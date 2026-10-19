@@ -289,6 +289,7 @@ export async function loadAdminServices(){return select('v2_admin_services','nam
 export async function loadAdminAccessUsers(){return select('v2_admin_access_users','email',1000)}
 export const adminCreateService=(a:any)=>rpc('v2_admin_create_service',a);
 export const adminUpdateService=(a:any)=>rpc('v2_admin_update_service',a);
+export const adminSaveServiceSchedule=(a:any)=>rpc('v2_admin_save_service_schedule',a);
 export type PairedJourneyDesignInput={
  serviceId:string; outboundLocalTime:string; returnEnabled:boolean;
  returnLocalTime:string|null; returnDurationMinutes:number|null; reverseRouteId:string|null;
