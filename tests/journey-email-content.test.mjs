@@ -16,7 +16,11 @@ async function loadEmailContent() {
 }
 
 async function loadCustomerEmail() {
+  const refundBuilder = ts.transpileModule(readFileSync(new URL('../lib/refund-admin-email.ts', import.meta.url), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 }
+  }).outputText.replaceAll('export ', '');
   const source = readFileSync(customerEmailPath, 'utf8')
+    .replace("import {buildRefundAdminEmail} from './refund-admin-email';", refundBuilder)
     .replace("import {createClient} from '@supabase/supabase-js';", '')
     .replace("import {buildJourneyBroadcastEmail,type JourneyBroadcastCategory} from './journey-broadcast-email';", "const buildJourneyBroadcastEmail=(input)=>({subject:'Journey update',text:input.message});")
     .replace("import {buildFeedbackEmail} from './feedback-email-content';", "const buildFeedbackEmail=()=>({subject:'Feedback',text:'Feedback'});")
