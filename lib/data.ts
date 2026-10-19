@@ -81,6 +81,7 @@ export const adminCancelBooking=(bookingId:string,refundCents:number,reason:stri
 export const adminRegisterOperatorCancellation=(allocationId:string,replacementCents:number,feeCents:number,reason:string)=>rpc('v2_admin_register_operator_cancellation',{p_confirmed_allocation_id:allocationId,p_replacement_cost_cents:replacementCents,p_cancellation_fee_cents:feeCents,p_reason:reason});
 export const adminCreateVehicle=(a:any)=>rpc('v2_admin_create_vehicle',a);
 export const adminCreateCaptain=(a:any)=>rpc('v2_admin_create_captain',a);
+export const adminSaveCaptain=(a:any)=>rpc('v2_admin_save_captain',a);
 export const adminSetCaptainVehicleType=(captainId:string,vehicleTypeId:string,active=true)=>rpc('v2_admin_set_captain_vehicle_type',{p_captain_id:captainId,p_vehicle_type_id:vehicleTypeId,p_active:active});
 export const adminCreateRouteOffer=(a:{
  p_vehicle_id:string;p_service_id:string;p_min_seats:number;p_max_seats:number;p_min_revenue_cents:number;
