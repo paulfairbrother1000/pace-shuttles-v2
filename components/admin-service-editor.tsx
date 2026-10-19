@@ -111,7 +111,7 @@ export function AdminServiceEditor({serviceId,outboundLocalTime,returnEnabled=fa
   if(!outboundTime){setMessage({kind:'error',text:'Outbound start time is required.'});return}
   if(hasReturn&&!reverseRouteId){setMessage({kind:'error',text:'Choose an eligible return route.'});return}
   if(hasReturn&&!eligibleRoutes.some(route=>route.id===reverseRouteId)){setMessage({kind:'error',text:'Choose an eligible return route.'});return}
-  if(hasReturn&&!returnTime){setMessage({kind:'error',text:'Return start time is required.'});return}
+  if(hasReturn&&!returnTime){setMessage({kind:'error',text:'Return pickup time at destination is required.'});return}
   if(hasReturn&&duration===null){setMessage({kind:'error',text:'Return duration is required.'});return}
   if(hasReturn&&duration!==null&&(!Number.isInteger(duration)||duration<=0)){setMessage({kind:'error',text:'Return duration must be a positive whole number of minutes.'});return}
   setSaving(true);
@@ -160,7 +160,7 @@ export function AdminServiceEditor({serviceId,outboundLocalTime,returnEnabled=fa
   <label className="form-field"><span>Outbound start time</span><input aria-label="Outbound start time" type="time" required disabled={disabled} value={outboundTime} onChange={event=>setOutboundTime(event.target.value)}/></label>
   <label className="form-field"><span>Return journey</span><input aria-label="Return journey" type="checkbox" disabled={disabled} checked={hasReturn} onChange={event=>setHasReturn(event.target.checked)}/></label>
   <label className="form-field"><span>Return route</span><select aria-label="Return route" disabled={!hasReturn||disabled} value={reverseRouteId} onChange={event=>setReverseRouteId(event.target.value)}><option value="">Select the mapped operational return route</option>{eligibleRoutes.map(route=><option key={route.id} value={route.id}>{route.route_name||route.name||route.id}</option>)}</select></label>
-  <label className="form-field"><span>Return start time</span><input aria-label="Return start time" type="time" disabled={!hasReturn||disabled} required={hasReturn} value={returnTime} onChange={event=>setReturnTime(event.target.value)}/></label>
+  <label className="form-field"><span>Return pickup time at destination</span><input aria-label="Return pickup time at destination" type="time" disabled={!hasReturn||disabled} required={hasReturn} value={returnTime} onChange={event=>setReturnTime(event.target.value)}/></label>
   <label className="form-field"><span>Return duration (minutes)</span><input aria-label="Return duration (minutes)" type="number" min="1" step="1" disabled={!hasReturn||disabled} required={hasReturn} value={returnDuration} onChange={event=>setReturnDuration(event.target.value)}/></label>
   <div className="action-buttons"><button className="btn" type="submit" disabled={disabled}>{hydrating?'Loading journey design…':saving?'Saving…':'Save journey design'}</button>{loadFailed?<button className="btn secondary" type="button" onClick={()=>setLoadAttempt(attempt=>attempt+1)}>Retry loading journey design</button>:null}</div>
   {message?<p className={message.kind==='success'?'action-success':'action-error'} role={message.kind==='success'?'status':'alert'}>{message.text}</p>:null}

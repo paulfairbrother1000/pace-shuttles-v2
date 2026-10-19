@@ -53,7 +53,7 @@ describe('AdminServiceEditor',()=>{
   render(<AdminServiceEditor serviceId="service-1" outboundLocalTime="10:00:00" returnRoutes={[{id:'return-route-1',route_name:'Harbour return'}]}/>);
 
   expect(screen.getByLabelText('Return journey')).toBeTruthy();
-  const returnTime=screen.getByLabelText('Return start time') as HTMLInputElement;
+  const returnTime=screen.getByLabelText('Return pickup time at destination') as HTMLInputElement;
   const returnDuration=screen.getByLabelText('Return duration (minutes)') as HTMLInputElement;
   expect(returnTime.disabled).toBe(true);
   expect(returnDuration.disabled).toBe(true);
@@ -83,7 +83,7 @@ describe('AdminServiceEditor',()=>{
 
   expect((await screen.findByRole('alert')).textContent).toContain('return journey cannot be removed');
   expect((screen.getByLabelText('Outbound start time') as HTMLInputElement).value).toBe('09:00');
-  expect((screen.getByLabelText('Return start time') as HTMLInputElement).value).toBe('15:30');
+  expect((screen.getByLabelText('Return pickup time at destination') as HTMLInputElement).value).toBe('15:30');
  expect((screen.getByLabelText('Return duration (minutes)') as HTMLInputElement).value).toBe('45');
  });
 
@@ -93,7 +93,7 @@ describe('AdminServiceEditor',()=>{
 
   await waitFor(()=>expect((screen.getByLabelText('Return journey') as HTMLInputElement).checked).toBe(true));
   expect((screen.getByLabelText('Outbound start time') as HTMLInputElement).value).toBe('10:00');
-  expect((screen.getByLabelText('Return start time') as HTMLInputElement).value).toBe('16:00');
+  expect((screen.getByLabelText('Return pickup time at destination') as HTMLInputElement).value).toBe('16:00');
   expect((screen.getByLabelText('Return duration (minutes)') as HTMLInputElement).value).toBe('30');
   expect((screen.getByLabelText('Return route') as HTMLSelectElement).value).toBe('return-route-3');
  });
@@ -110,7 +110,7 @@ describe('AdminServiceEditor',()=>{
   await waitFor(()=>expect(fixtures.adminLoadPairedJourneyDesign).toHaveBeenLastCalledWith('service-5'));
   expect((screen.getByLabelText('Return journey') as HTMLInputElement).checked).toBe(false);
   expect((screen.getByLabelText('Outbound start time') as HTMLInputElement).value).toBe('11:15');
-  expect((screen.getByLabelText('Return start time') as HTMLInputElement).value).toBe('');
+  expect((screen.getByLabelText('Return pickup time at destination') as HTMLInputElement).value).toBe('');
   expect((screen.getByLabelText('Return duration (minutes)') as HTMLInputElement).value).toBe('');
  });
 });
@@ -175,8 +175,8 @@ it('shows explicit validation errors for missing return fields and invalid minut
  await waitFor(()=>expect((screen.getByRole('button',{name:'Save journey design'}) as HTMLButtonElement).disabled).toBe(false));
  await user.selectOptions(screen.getByLabelText('Return route'),'mapped');
  await user.click(screen.getByRole('button',{name:'Save journey design'}));
- expect((await screen.findByRole('alert')).textContent).toContain('Return start time is required');
- await user.type(screen.getByLabelText('Return start time'),'16:00');
+ expect((await screen.findByRole('alert')).textContent).toContain('Return pickup time at destination is required');
+ await user.type(screen.getByLabelText('Return pickup time at destination'),'16:00');
  await user.click(screen.getByRole('button',{name:'Save journey design'}));
  expect((await screen.findByRole('alert')).textContent).toContain('Return duration is required');
  await user.type(screen.getByLabelText('Return duration (minutes)'),'1.5');
