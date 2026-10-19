@@ -10,13 +10,14 @@ import {JourneyConversation} from './journey-conversation';
 import {CONTACT_CAPTAIN_CATEGORY,ContactCaptainSupportOption,CustomerDayOfTravel} from './customer-day-of-travel';
 import { AdminServiceAssignment } from './admin-service-assignment';
 import {AdminServiceEditor} from './admin-service-editor';
-import {formatServiceRouteChoices,resolveServiceRouteChoice} from '@/lib/service-route-selection';
+import {AdminServiceCreationForm,type ServiceCreationInput} from './admin-service-creation-form';
 import { AdminOperatorForm } from './admin-operator-form';
 import { AdminTransportTypes } from './admin-transport-types';
 import {JourneyFeedbackForm,useJourneyFeedbackFlow} from './journey-feedback-form';
 import {AdminJourneyCommunications} from './admin-journey-communications';
 import {AdminQualityPerformance} from './admin-quality-performance';
 import {adminReplyJourneyConversation,customerSubmitJourneyFeedback,loadAdminJourneyBroadcastDeliveries,loadAdminJourneyConversations,loadAdminJourneyMessages,loadAdminOperationalAlerts,loadAdminQualityDashboard,loadAdminRecentQualityPage} from '@/lib/data';
+import {adminSavePairedJourneyDesign,adminSaveRouteReturnMapping} from '@/lib/data';
 const money=(c:number)=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format((c||0)/100);
 const date=(x:any)=>x?new Date(x).toLocaleString():'—';
 function useLoad(fn:any){const [rows,setRows]=useState<any[]>([]),[error,setError]=useState(''),[loading,setLoading]=useState(true);const reload=async()=>{setLoading(true);const result=await fn();setRows(result.data||[]);setError(result.error?.message||'');setLoading(false)};useEffect(()=>{void reload()},[fn]);return {rows,error,loading,reload}}
@@ -310,30 +311,29 @@ export function CustomerSearch(){
 
 
 function ServiceScheduling(){
- const {rows:services}=useLoad(loadAdminServices),{rows:routes}=useLoad(loadRoutes); const [msg,setMsg]=useState('');
+ const {rows:services}=useLoad(loadAdminServices),{rows:routes}=useLoad(loadRoutes); const [msg,setMsg]=useState(''),[showCreate,setShowCreate]=useState(false),[saving,setSaving]=useState(false);
  const days=(x:any)=>Array.isArray(x)?x.map((d:number)=>['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]??d).join(', '):'—';
- const add=async()=>{
-  if(!routes.length){setMsg('Create an active route first.');return}
-  const choice=window.prompt(`Choose the route for this service by number:\n${formatServiceRouteChoices(routes)}`);
-  if(choice===null)return;
-  const route=resolveServiceRouteChoice(routes,choice);
-  if(!route){setMsg('Enter a valid route number. No service was created.');return}
-  const routeName=route.route_name||route.name||route.id;
-  const name=window.prompt('Service name',`${routeName} service`);
-  if(!name)return;
-  const time=window.prompt('Local departure time (HH:MM)','09:00');
-  if(!time)return;
-  const raw=window.prompt('Days of week: 0=Sun, 1=Mon ... 6=Sat. Example: 1,3,5','1,2,3,4,5');
-  if(!raw)return;
-  const dow=raw.split(',').map((x:string)=>Number(x.trim())).filter((x:number)=>Number.isInteger(x)&&x>=0&&x<=6);
-  if(!dow.length){setMsg('Enter at least one valid day of the week. No service was created.');return}
-  const from=window.prompt('Valid from (YYYY-MM-DD)',new Date().toISOString().slice(0,10));
-  if(!from)return;
-  const r=await adminCreateService({p_route_id:route.id,p_name:name,p_timezone:route.trip_timezone||'America/Antigua',p_days_of_week:dow,p_departure_time:time,p_valid_from:from,p_valid_to:null,p_recurrence_type:'weekly',p_recurrence_interval_weeks:1,p_recurrence_anchor_date:from,p_notes:null});
-  if(r.error)setMsg(r.error.message);else window.location.reload()
+ const add=async(input:ServiceCreationInput)=>{
+  setSaving(true);setMsg('');
+  try{
+   if(input.returnEnabled){
+    const mapping=await adminSaveRouteReturnMapping({outboundRouteId:input.route.id,returnRouteId:input.returnRouteId});
+    if(mapping.error){setMsg(`Return route could not be linked: ${mapping.error.message||String(mapping.error)}`);return}
+   }
+   const created=await adminCreateService({p_route_id:input.route.id,p_name:input.name,p_timezone:input.route.trip_timezone||'America/Antigua',p_days_of_week:input.daysOfWeek,p_departure_time:input.departureTime,p_valid_from:input.validFrom,p_valid_to:input.validTo,p_recurrence_type:'weekly',p_recurrence_interval_weeks:1,p_recurrence_anchor_date:input.validFrom,p_notes:null});
+   if(created.error){setMsg(created.error.message||String(created.error));return}
+   const row=Array.isArray(created.data)?created.data[0]:created.data;
+   const serviceId=typeof row==='string'?row:(row?.service_id||row?.id);
+   if(input.returnEnabled&&serviceId){
+    const design=await adminSavePairedJourneyDesign({serviceId,outboundLocalTime:input.departureTime,returnEnabled:true,returnLocalTime:input.returnPickupTime,returnDurationMinutes:Number(input.returnDurationMinutes),reverseRouteId:input.returnRouteId});
+    if(design.error){setMsg(`Service created, but return details could not be saved: ${design.error.message||String(design.error)}`);return}
+   }else if(input.returnEnabled){setMsg('Service created, but the return journey could not be linked because no service ID was returned.');return}
+   window.location.reload();
+  }catch(error){setMsg(error instanceof Error?error.message:String(error))}
+  finally{setSaving(false)}
 };
  const generate=async()=>{const from=window.prompt('Generate departures from (YYYY-MM-DD)',new Date().toISOString().slice(0,10));if(!from)return;const d=new Date(from+'T12:00:00');d.setDate(d.getDate()+90);const to=window.prompt('Generate departures through (YYYY-MM-DD)',d.toISOString().slice(0,10));if(!to)return;const r=await adminGenerateDepartures(from,to);if(r.error)setMsg(r.error.message);else setMsg(`Departure generation completed · ${Array.isArray(r.data)?r.data.length:0} service/date results processed`)};
- return <Section title="Service scheduling" action={<div className="action-buttons"><button className="btn secondary" onClick={generate}>Generate departures</button><button className="btn" onClick={add}>+ Add service</button></div>}><p className="data-note">Routes are reusable route definitions. To advertise journeys, choose a route, set its departure time, days and start date, then generate dated departures. Existing generated journeys are protected by the database generator.</p><table className="table"><thead><tr><th>Service</th><th>Route</th><th>Pattern</th><th>Validity</th><th>Generated</th><th>Next journey</th><th>Status</th></tr></thead><tbody>{services.map(x=><tr key={x.id}><td><b>{x.name}</b><br/><small>{x.departure_time} · {x.timezone}</small></td><td>{x.route_name}</td><td>{days(x.days_of_week)}<br/><small>{x.recurrence_interval_weeks>1?`Every ${x.recurrence_interval_weeks} weeks`:'Weekly'}</small></td><td>{x.valid_from} → {x.valid_to||'ongoing'}</td><td>{x.generated_departures||0}</td><td>{date(x.next_departure_ts)}</td><td><Status value={x.active?'ACTIVE':'INACTIVE'}/></td></tr>)}</tbody></table>{services.map(x=><Section key={x.id} title={`${x.name} journey design`}><AdminServiceEditor serviceId={x.id} outboundLocalTime={x.departure_time} returnEnabled={Boolean(x.return_enabled)} returnLocalTime={x.return_departure_local_time} returnDurationMinutes={x.return_duration_minutes} returnRouteId={x.reverse_route_id}/></Section>)}{!services.length&&<div className="empty-state">No recurring services configured yet.</div>}{msg&&<p className={msg.includes('completed')?'action-success':'action-error'}>{msg}</p>}</Section>
+ return <Section title="Service scheduling" action={<div className="action-buttons"><button className="btn secondary" onClick={generate}>Generate departures</button><button className="btn" onClick={()=>{setMsg('');setShowCreate(value=>!value)}}>{showCreate?'Close form':'+ Add service'}</button></div>}><p className="data-note">Choose an existing route, set its weekly departure and season window, then add the return pickup time if the service runs both ways.</p>{showCreate&&<Section title="New scheduled journey"><AdminServiceCreationForm routes={routes} onCreate={add} onCancel={()=>setShowCreate(false)} busy={saving}/></Section>}<table className="table"><thead><tr><th>Service</th><th>Route</th><th>Pattern</th><th>Validity</th><th>Generated</th><th>Next journey</th><th>Status</th></tr></thead><tbody>{services.map(x=><tr key={x.id}><td><b>{x.name}</b><br/><small>{x.departure_time} · {x.timezone}</small></td><td>{x.route_name}</td><td>{days(x.days_of_week)}<br/><small>{x.recurrence_interval_weeks>1?`Every ${x.recurrence_interval_weeks} weeks`:'Weekly'}</small></td><td>{x.valid_from} → {x.valid_to||'ongoing'}</td><td>{x.generated_departures||0}</td><td>{date(x.next_departure_ts)}</td><td><Status value={x.active?'ACTIVE':'INACTIVE'}/></td></tr>)}</tbody></table>{services.map(x=><Section key={x.id} title={`${x.name} journey design`}><AdminServiceEditor serviceId={x.id} outboundLocalTime={x.departure_time} returnEnabled={Boolean(x.return_enabled)} returnLocalTime={x.return_departure_local_time} returnDurationMinutes={x.return_duration_minutes} returnRouteId={x.reverse_route_id}/></Section>)}{!services.length&&<div className="empty-state">No recurring services configured yet.</div>}{msg&&<p className={msg.includes('completed')?'action-success':'action-error'}>{msg}</p>}</Section>
 }
 function AccessManagement(){
  const {rows:users}=useLoad(loadAdminAccessUsers),{rows:operators}=useLoad(loadOperators),{rows:captains}=useLoad(loadCaptains); const [msg,setMsg]=useState('');
