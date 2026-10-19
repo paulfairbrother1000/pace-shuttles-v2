@@ -130,6 +130,7 @@ export const adminCreateLocality=(a:any)=>rpc('v2_admin_create_locality',a);
 export const adminCreatePickup=(a:any)=>rpc('v2_admin_create_pickup',a);
 export const adminCreateDestination=(a:any)=>rpc('v2_admin_create_destination',a);
 export const adminCreateRoute=(a:any)=>rpc('v2_admin_create_route',a);
+export const adminCreateScheduledRoute=(a:any)=>rpc('v2_admin_create_scheduled_route',a);
 export const adminSetRouteActive=(routeId:string,active:boolean)=>rpc('v2_admin_set_route_active',{p_route_id:routeId,p_active:active});
 export const adminSetRouteVehicleType=(routeId:string,vehicleTypeId:string,active:boolean)=>rpc('v2_admin_set_route_vehicle_type',{p_route_id:routeId,p_vehicle_type_id:vehicleTypeId,p_active:active});
 export const adminSetOperatorVehicleType=(operatorId:string,vehicleTypeId:string,approved:boolean,note:string)=>rpc('v2_admin_set_operator_vehicle_type',{p_operator_id:operatorId,p_vehicle_type_id:vehicleTypeId,p_approved:approved,p_note:note});
