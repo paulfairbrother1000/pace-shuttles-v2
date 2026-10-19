@@ -135,14 +135,28 @@ test('quick dates remain broad only for filters the customer has not selected',(
   assert.deepEqual(availableJourneyDates(departures,{countryId:'bvi'}),['2026-09-02','2026-09-04']);
 });
 
-test('route changes cannot search with an invalid stale date or vehicle type',()=>{
+test('route changes keep each selected filter while refreshing dates and matching journeys',()=>{
   const source=readFileSync('components/customer-booking.tsx','utf8');
-  assert.match(source,/vehicleType\s*&&[\s\S]*!types\.some\(\(type\) => \(type\.id \|\| type\.name\) === vehicleType\)/);
-  assert.match(source,/country\s*&&[\s\S]*datesRouteKey === routeKey[\s\S]*void searchJourneys\(\)/);
+  assert.match(source,/const \[allJourneys, selectedJourneys\] = await Promise\.all/);
+  assert.match(source,/p_local_date: null/);
+  assert.doesNotMatch(source,/if \(vehicleType && !types\.some/);
+  assert.doesNotMatch(source,/setDay\(''\);\s*\}, \[routeKey\]/);
 });
 
 test('offered dates come from bookable search results rather than schedule rows alone',()=>{
   const source=readFileSync('components/customer-booking.tsx','utf8');
-  assert.match(source,/setBookableDates\(\(current\) =>[\s\S]*availableJourneyDates\(visibleBookableJourneys\(rows\), \{\}\)/);
+  assert.match(source,/setBookableDates\(\(current\) =>[\s\S]*availableJourneyDates\(visibleBookableJourneys\(allRows\), \{\}\)/);
   assert.match(source,/matchingJourneyDeps\.filter\(\(row\) =>\s*dates\.includes\(row\.local_departure_date\)/);
+});
+
+test('home page keeps visual journey selectors and explains removable applied filters',()=>{
+  const source=readFileSync('components/customer-booking.tsx','utf8');
+  assert.match(source,/Choose any combination of destination, pick-up, date and vehicle type/);
+  assert.match(source,/Applied filters/);
+  assert.match(source,/Clear all filters/);
+  assert.match(source,/aria-pressed=\{dest === d\.id\}/);
+  assert.match(source,/aria-pressed=\{pickup === p\.id\}/);
+  assert.match(source,/aria-pressed=\{vehicleType === \(t\.id \|\| t\.name\)\}/);
+  assert.match(source,/Remove \$\{filter\.label\} filter/);
+  assert.doesNotMatch(source,/<div className="ps-filters">/);
 });

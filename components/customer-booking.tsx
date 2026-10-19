@@ -47,13 +47,10 @@ export default function CustomerBooking() {
     [msg, setMsg] = useState(''),
     [browseTab, setBrowseTab] = useState<'destination' | 'pickup' | 'date' | 'type'>('destination'),
     [locationInfo, setLocationInfo] = useState<any | null>(null),
-    [calendarOpen, setCalendarOpen] = useState(false),
     [calendarMonth, setCalendarMonth] = useState(() => {
       const d = new Date();
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     });
-  const routeKey = [country, dest, pickup, vehicleType].join('|');
-  const [datesRouteKey, setDatesRouteKey] = useState('');
   useEffect(() => {
     (async () => {
       if (!s) return;
@@ -85,6 +82,15 @@ export default function CustomerBooking() {
     deps.filter((x) => (!country || x.country_id === country) && (!dest || x.destination_id === dest) && (!pickup || x.pickup_id === pickup)).forEach((x) => (x.vehicle_types || []).forEach((v: any) => m.set(v.id || v.name, v)));
     return Array.from(m.values());
   }, [deps, country, dest, pickup]);
+  const selectedDestination = catalogue.destinations.find((item) => item.id === dest);
+  const selectedPickup = catalogue.pickups.find((item) => item.id === pickup);
+  const selectedVehicleType = deps.flatMap((item) => item.vehicle_types || []).find((item: any) => (item.id || item.name) === vehicleType);
+  const activeFilters = [
+    dest && { key: 'destination', label: `Destination: ${selectedDestination?.name || 'Selected destination'}` },
+    pickup && { key: 'pickup', label: `Pick-up: ${selectedPickup?.name || 'Selected pick-up'}` },
+    day && { key: 'date', label: `Date: ${new Date(day + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}` },
+    vehicleType && { key: 'type', label: `Vehicle type: ${selectedVehicleType?.name || 'Selected type'}` },
+  ].filter(Boolean) as { key: 'destination' | 'pickup' | 'date' | 'type'; label: string }[];
   const countryDeps = matchingJourneyDeps.filter((row) => dates.includes(row.local_departure_date));
   const partyFor = (id: string) => journeyPartySizes[id] || 1;
   async function quoteJourney(id: string, partySize: number) {
@@ -171,42 +177,34 @@ export default function CustomerBooking() {
       p_country_id: country || null,
       p_destination_id: dest || null,
       p_pickup_id: pickup || null,
-      p_local_date: day || null,
       p_party_size: 1,
       p_vehicle_type_id: vehicleType || null,
     };
-    const { data, error } = await s.rpc('v2_public_search_journeys', args);
+    const allRequest = s.rpc('v2_public_search_journeys', { ...args, p_local_date: null });
+    const selectedRequest = day
+      ? s.rpc('v2_public_search_journeys', { ...args, p_local_date: day })
+      : allRequest;
+    const [allJourneys, selectedJourneys] = await Promise.all([allRequest, selectedRequest]);
     setSearching(false);
-    if (error) {
-      setMsg(error.message);
+    if (allJourneys.error || selectedJourneys.error) {
+      setMsg((selectedJourneys.error || allJourneys.error)?.message || 'Journeys could not be loaded. Please try again.');
       setResults([]);
       setJourneyPartySizes({});
     } else {
-      const rows = data || [];
-      if (!day) {
-        setBookableDates((current) => {
-          const next = availableJourneyDates(visibleBookableJourneys(rows), {});
-          return current.join('|') === next.join('|') ? current : next;
-        });
-        setDatesRouteKey(routeKey);
-      }
+      const allRows = allJourneys.data || [];
+      const rows = selectedJourneys.data || [];
+      setBookableDates((current) => {
+        const next = availableJourneyDates(visibleBookableJourneys(allRows), {});
+        return current.join('|') === next.join('|') ? current : next;
+      });
       setResults(rows);
       setJourneyPartySizes(defaultJourneyPartySizes(rows));
       void hydrateLivePrices(rows);
     }
   }
   useEffect(() => {
-    if (vehicleType && !types.some((type) => (type.id || type.name) === vehicleType)) setVehicleType('');
-  }, [vehicleType, types]);
-  useEffect(() => {
-    setDay('');
-  }, [routeKey]);
-  useEffect(() => {
-    if (day && !dates.includes(day)) setDay('');
-  }, [day, dates]);
-  useEffect(() => {
-    if (country && (!day || (datesRouteKey === routeKey && dates.includes(day)))) void searchJourneys();
-  }, [country, dest, pickup, day, vehicleType, dates, datesRouteKey, routeKey]);
+    if (country) void searchJourneys();
+  }, [country, dest, pickup, day, vehicleType]);
   function resetCountry() {
     setCountry('');
     setDest('');
@@ -219,17 +217,13 @@ export default function CustomerBooking() {
   }
   function chooseDestination(id: string) {
     setDest(id);
-    setPickup('');
-    setVehicleType('');
-    setResults([]);
   }
   function setMonthFromDate(value: string) {
     if (value) setCalendarMonth(value.slice(0, 7));
   }
-  function selectCalendarDay(value: string, close = true) {
+  function selectCalendarDay(value: string) {
     setDay(value);
     setMonthFromDate(value);
-    if (close) setCalendarOpen(false);
   }
   function Calendar({ discovery = false }: { discovery?: boolean }) {
     const [yy, mm] = calendarMonth.split('-').map(Number);
@@ -250,7 +244,7 @@ export default function CustomerBooking() {
     };
     const pick = (n: number) => {
       const v = `${calendarMonth}-${String(n).padStart(2, '0')}`;
-      selectCalendarDay(v, !discovery);
+      selectCalendarDay(day === v ? '' : v);
       if (discovery) setBrowseTab('destination');
     };
     return (
@@ -381,32 +375,36 @@ export default function CustomerBooking() {
           </div>
         </section>
       )}
-      {country && !dest && (
-        <section className="ps-section ps-discovery" id="journeys">
+      {country && (
+        <section className="ps-section ps-discovery" id="journey-filters">
           <button className="ps-back-chip" onClick={resetCountry}>
             ← change country
           </button>
           <div className="ps-discovery-panel">
+            <div className="ps-filter-instructions">
+              <h2>Plan your journey</h2>
+              <p>Choose any combination of destination, pick-up, date and vehicle type. Journeys update automatically. Your active choices appear below; use × to remove one, or Clear all filters to start again.</p>
+            </div>
             <div className="ps-discovery-tabs">
-              <button className={browseTab === 'date' ? 'active' : ''} onClick={() => setBrowseTab('date')}>
+              <button className={browseTab === 'date' ? 'active' : ''} aria-pressed={browseTab === 'date'} onClick={() => setBrowseTab('date')}>
                 Date
               </button>
-              <button className={browseTab === 'destination' ? 'active' : ''} onClick={() => setBrowseTab('destination')}>
+              <button className={browseTab === 'destination' ? 'active' : ''} aria-pressed={browseTab === 'destination'} onClick={() => setBrowseTab('destination')}>
                 Destination
               </button>
-              <button className={browseTab === 'pickup' ? 'active' : ''} onClick={() => setBrowseTab('pickup')}>
+              <button className={browseTab === 'pickup' ? 'active' : ''} aria-pressed={browseTab === 'pickup'} onClick={() => setBrowseTab('pickup')}>
                 Pickup
               </button>
-              <button className={browseTab === 'type' ? 'active' : ''} onClick={() => setBrowseTab('type')}>
-                Type
+              <button className={browseTab === 'type' ? 'active' : ''} aria-pressed={browseTab === 'type'} onClick={() => setBrowseTab('type')}>
+                Vehicle type
               </button>
             </div>
             {browseTab === 'destination' && (
               <>
-                <p className="ps-discovery-label">Choose a destination</p>
+                <p className="ps-discovery-label">Choose a destination{dest ? ` · selected: ${selectedDestination?.name || ''}` : ''}</p>
                 <div className="ps-destination-grid">
                   {dests.map((d: any) => (
-                    <button key={d.id} className="ps-destination-card" onClick={() => chooseDestination(d.id)}>
+                    <button key={d.id} className={`ps-destination-card${dest === d.id ? ' selected' : ''}`} aria-pressed={dest === d.id} onClick={() => dest === d.id ? setDest('') : chooseDestination(d.id)}>
                       <Photo src={d.picture_url} alt={d.name} />
                       <div>
                         <b>{d.name}</b>
@@ -419,14 +417,15 @@ export default function CustomerBooking() {
             )}
             {browseTab === 'pickup' && (
               <>
-                <p className="ps-discovery-label">Choose your pick-up point</p>
+                <p className="ps-discovery-label">Choose your pick-up point{pickup ? ` · selected: ${selectedPickup?.name || ''}` : ''}</p>
                 <div className="ps-destination-grid">
                   {pickups.map((p: any) => (
                     <button
                       key={p.id}
-                      className="ps-destination-card"
+                      className={`ps-destination-card${pickup === p.id ? ' selected' : ''}`}
+                      aria-pressed={pickup === p.id}
                       onClick={() => {
-                        setPickup(p.id);
+                        setPickup(pickup === p.id ? '' : p.id);
                         setBrowseTab('destination');
                       }}
                     >
@@ -442,16 +441,16 @@ export default function CustomerBooking() {
             )}
             {browseTab === 'date' && (
               <>
-                <p className="ps-discovery-label">Choose a date — all scheduled journeys in this country are shown below.</p>
+                <p className="ps-discovery-label">Choose a date from the calendar. Days with journeys are highlighted.</p>
                 <Calendar discovery />
               </>
             )}
             {browseTab === 'type' && (
               <>
-                <p className="ps-discovery-label">Choose how you want to travel</p>
+                <p className="ps-discovery-label">Choose how you want to travel{vehicleType ? ` · selected: ${selectedVehicleType?.name || ''}` : ''}</p>
                 <div className="ps-type-grid">
                   {types.map((t: any) => (
-                    <button key={t.id || t.name} className={`ps-type-card${vehicleType === t.id ? ' selected' : ''}`} onClick={() => setVehicleType(vehicleType === t.id ? '' : t.id)}>
+                    <button key={t.id || t.name} className={`ps-type-card${vehicleType === (t.id || t.name) ? ' selected' : ''}`} aria-pressed={vehicleType === (t.id || t.name)} onClick={() => setVehicleType(vehicleType === (t.id || t.name) ? '' : (t.id || t.name))}>
                       <Photo src={t.picture_url} alt={t.name} />
                       <b>{t.name}</b>
                     </button>
@@ -460,97 +459,38 @@ export default function CustomerBooking() {
               </>
             )}
           </div>
+          <div className="ps-applied-filters" aria-label="Applied filters">
+            <div className="ps-applied-filters-head">
+              <strong>Applied filters ({activeFilters.length})</strong>
+              {activeFilters.length > 0 && <button type="button" onClick={() => { setDest(''); setPickup(''); setDay(''); setVehicleType(''); }}>Clear all filters</button>}
+            </div>
+            {activeFilters.length > 0 ? (
+              <div className="ps-filter-chips">
+                {activeFilters.map((filter) => (
+                  <span className="ps-filter-chip" key={filter.key}>
+                    {filter.label}
+                    <button type="button" aria-label={`Remove ${filter.label} filter`} onClick={() => {
+                      if (filter.key === 'destination') setDest('');
+                      if (filter.key === 'pickup') setPickup('');
+                      if (filter.key === 'date') setDay('');
+                      if (filter.key === 'type') setVehicleType('');
+                    }}>×</button>
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="ps-no-filters">No filters applied. Showing all available journeys in this country.</p>
+            )}
+          </div>
         </section>
       )}
       {country && (
         <section className="ps-section" id="journeys">
           <div className="ps-planner-head">
             <div>
-              {dest ? (
-                <button
-                  className="ps-back"
-                  onClick={() => {
-                    setDest('');
-                    setPickup('');
-                    setResults([]);
-                  }}
-                >
-                  ← All destinations
-                </button>
-              ) : (
-                <button className="ps-back" onClick={() => setBrowseTab('destination')}>
-                  Browse destinations
-                </button>
-              )}
-              <h2>Plan your journey</h2>
+              <h2>Available journeys in {countries.find((c) => c.id === country)?.name || 'this country'}</h2>
             </div>
           </div>
-          <div className="ps-filters">
-            <label>
-              Destination
-              <select
-                value={dest}
-                onChange={(e) => {
-                  setDest(e.target.value);
-                  setPickup('');
-                }}
-              >
-                <option value="">All destinations</option>
-                {dests.map((d: any) => (
-                  <option value={d.id} key={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Pick-up
-              <select value={pickup} onChange={(e) => setPickup(e.target.value)}>
-                <option value="">All pick-up points</option>
-                {pickups.map((p: any) => (
-                  <option value={p.id} key={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Date
-              <button
-                type="button"
-                className="ps-date-filter-button"
-                onClick={() => {
-                  if (day) setMonthFromDate(day);
-                  setCalendarOpen(true);
-                }}
-              >
-                {day ? new Date(day + 'T12:00:00').toLocaleDateString('en-GB') : 'Choose date'} <span>▣</span>
-              </button>
-            </label>
-            <label>
-              Type
-              <select value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
-                <option value="">All types</option>
-                {types.map((t: any) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-          {calendarOpen && (
-            <div className="ps-calendar-modal" role="dialog" aria-modal="true" onClick={() => setCalendarOpen(false)}>
-              <div className="ps-calendar-dialog" onClick={(e) => e.stopPropagation()}>
-                <button className="ps-calendar-close" onClick={() => setCalendarOpen(false)}>
-                  ×
-                </button>
-                <h3>Choose a date</h3>
-                <p>See everything running in {countries.find((c) => c.id === country)?.name || 'this country'}.</p>
-                <Calendar />
-              </div>
-            </div>
-          )}
           {dates.length > 0 && (
             <div className="ps-available-dates">
               <span>Next available dates</span>
