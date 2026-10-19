@@ -2,13 +2,14 @@
 
 import {useEffect,useState} from 'react';
 import {
-  loadOperators,loadVehicles,loadCaptains,loadVehicleRouteOffers,
+  loadOperators,loadVehicles,loadCaptains,loadVehicleTypes,loadVehicleRouteOffers,
   loadVehicleUnavailability,loadOperatorCommissionOverrides,loadCountryCommissions,loadCancellationPolicies,
-  adminCreateCaptain,adminUpdateOperator,adminSetOperatorCommissionOverride,adminEndOperatorCommissionOverride
+  adminUpdateOperator,adminSetOperatorCommissionOverride,adminEndOperatorCommissionOverride
 } from '@/lib/data';
 import {KpiCard,Section,Status} from './ui';
 import {AdminOperatorVehicleEditor} from './admin-operator-vehicle-editor';
 import {AdminOperatorForm} from './admin-operator-form';
+import {AdminCaptainForm} from './admin-captain-form';
 
 const date=(x:any)=>x?new Date(x).toLocaleString():'—';
 
@@ -22,6 +23,7 @@ export function OperatorDetailRouteOffers({id}:{id:string}){
   const {rows:operators,error:operatorError}=useLoad(loadOperators);
   const {rows:vehicles}=useLoad(loadVehicles);
   const {rows:captains}=useLoad(loadCaptains);
+  const {rows:vehicleTypes}=useLoad(loadVehicleTypes);
   const {rows:offers}=useLoad(loadVehicleRouteOffers);
   const {rows:unavailability}=useLoad(loadVehicleUnavailability);
   const {rows:overrides}=useLoad(loadOperatorCommissionOverrides);
@@ -29,6 +31,7 @@ export function OperatorDetailRouteOffers({id}:{id:string}){
   const {rows:policies}=useLoad(loadCancellationPolicies);
   const [msg,setMsg]=useState('');
   const [editing,setEditing]=useState(false);
+  const [captainDraft,setCaptainDraft]=useState<any>(null);
   const operator=operators.find(x=>x.id===id);
   if(!operator)return <Section title="Operator"><div className="empty-state">{operatorError||'Loading operator…'}</div></Section>;
 
@@ -68,8 +71,8 @@ export function OperatorDetailRouteOffers({id}:{id:string}){
     </div>
 
     <div style={{marginTop:12}}>
-      <Section title="Captains" action={<button className="btn secondary" onClick={async()=>{const first=window.prompt('Captain first name');if(!first)return;const last=window.prompt('Captain last name');if(!last)return;done(await adminCreateCaptain({p_operator_id:id,p_first_name:first,p_last_name:last,p_email:null,p_phone:null,p_notes:'Created by Site Admin'}),'Captain')}}>+ Add Captain</button>}>
-        {crew.map(c=><div className="notice" key={c.id}><span><b>{c.first_name} {c.last_name}</b></span><Status value={c.active?'ACTIVE':'INACTIVE'}/></div>)}
+      <Section title="Captains" action={<button className="btn secondary" onClick={()=>setCaptainDraft({})}>+ Add captain</button>}>
+        {crew.map(c=><div className="notice" key={c.id}><span><b>{c.first_name} {c.last_name}</b><br/><small>{(c.vehicle_type_ids||[]).map((typeId:string)=>vehicleTypes.find((t:any)=>t.id===typeId)?.name).filter(Boolean).join(', ')||'No transport types assigned'} · {c.operator_vetting_confirmed?'Vetting and licence confirmed':'Confirmation required'}</small></span><div className="action-buttons"><Status value={c.active?'ACTIVE':'INACTIVE'}/><button className="btn secondary" onClick={()=>setCaptainDraft(c)}>Edit</button></div></div>)}
         {!crew.length&&<div className="empty-state">No captains.</div>}
       </Section>
     </div>
@@ -84,5 +87,6 @@ export function OperatorDetailRouteOffers({id}:{id:string}){
       {!blocks.length&&<div className="empty-state">No availability exceptions.</div>}
     </Section>
     {msg&&<p className={msg.toLowerCase().includes('saved')?'action-success':'action-error'}>{msg}</p>}<AdminOperatorForm open={editing} operator={operator} onClose={()=>setEditing(false)} onSaved={()=>window.location.reload()}/>
+    <AdminCaptainForm key={captainDraft?.id||'new-captain'} open={captainDraft!==null} operatorId={id} captain={captainDraft?.id?captainDraft:undefined} vehicleTypes={vehicleTypes} onClose={()=>setCaptainDraft(null)} onSaved={()=>{setMsg('Captain saved');window.location.reload()}}/>
   </>;
 }
