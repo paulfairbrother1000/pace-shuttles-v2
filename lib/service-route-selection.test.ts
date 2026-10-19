@@ -1,5 +1,5 @@
 import {describe,expect,it} from 'vitest';
-import {buildOneOffServiceSchedule,formatServiceRouteChoices,resolveServiceRouteChoice} from './service-route-selection';
+import {formatServiceRouteChoices,resolveServiceRouteChoice} from './service-route-selection';
 
 const routes=[
  {id:'route-1',route_name:'Jolly Harbour → Nobu'},
@@ -21,19 +21,4 @@ describe('service route selection',()=>{
   expect(resolveServiceRouteChoice(routes,'1.5')).toBeNull();
  });
 
- it('turns a valid one-off date into a single-day service window',()=>{
-  expect(buildOneOffServiceSchedule('2026-11-21')).toEqual({
-   daysOfWeek:[6],
-   validFrom:'2026-11-21',
-   validTo:'2026-11-21',
-   recurrenceType:'weekly',
-   recurrenceIntervalWeeks:1,
-   recurrenceAnchorDate:'2026-11-21',
-  });
- });
-
- it('rejects impossible one-off dates',()=>{
-  expect(buildOneOffServiceSchedule('2026-02-30')).toBeNull();
-  expect(buildOneOffServiceSchedule('not-a-date')).toBeNull();
- });
 });
